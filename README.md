@@ -1,6 +1,6 @@
 # Waveshare E-Paper Node.js Driver
 
-[![npm version](https://badge.fury.io/js/%40anders94%2Fwaveshare-epaper.svg)](https://www.npmjs.com/package/@anders94/waveshare-epaper)
+[![npm version](https://badge.fury.io/js/waveshare-epaper.svg)](https://www.npmjs.com/package/waveshare-epaper)
 
 A modular Node.js driver for Waveshare E-Paper displays that supports multiple display models with different resolutions and color modes.
 
@@ -28,13 +28,13 @@ A modular Node.js driver for Waveshare E-Paper displays that supports multiple d
 ## Installation
 
 ```bash
-npm install @anders94/waveshare-epaper
+npm install waveshare-epaper
 ```
 
 ## Quick Start
 
 ```javascript
-const { createEPD } = require('@anders94/waveshare-epaper');
+const { createEPD } = require('waveshare-epaper');
 
 async function example() {
     // Create display instance (13.3" 4-grayscale)
@@ -247,14 +247,14 @@ await epd.drawPNG('mixed-color-image.png', 0, 0);
 The original `EPD13in3k` class is still available for backward compatibility:
 
 ```javascript
-const { EPD13in3k } = require('@anders94/waveshare-epaper');
+const { EPD13in3k } = require('waveshare-epaper');
 const epd = new EPD13in3k();
 ```
 
 However, using the new factory function is recommended:
 
 ```javascript
-const { createEPD } = require('@anders94/waveshare-epaper');
+const { createEPD } = require('waveshare-epaper');
 const epd = createEPD('13in3k', 'mono');
 ```
 
