@@ -1,0 +1,52 @@
+{
+  "name": "@anders94/waveshare-epaper",
+  "version": "0.1.0",
+  "description": "A modular Node.js driver for Waveshare E-Paper displays that supports multiple display models with different resolutions and color modes",
+  "main": "index.js",
+  "scripts": {
+    "test": "node example.js",
+    "example": "node example.js",
+    "example-enhanced": "node examples-enhanced.js",
+    "prepublishOnly": "echo 'Ready to publish'"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anders94/waveshare-epaper.git"
+  },
+  "bugs": {
+    "url": "https://github.com/anders94/waveshare-epaper/issues"
+  },
+  "homepage": "https://github.com/anders94/waveshare-epaper#readme",
+  "dependencies": {
+    "spi-device": "^3.1.2",
+    "pngjs": "^7.0.0"
+  },
+  "keywords": [
+    "waveshare",
+    "e-paper",
+    "e-ink",
+    "epd",
+    "spi",
+    "display",
+    "raspberry-pi",
+    "monochrome",
+    "grayscale",
+    "color",
+    "7-color",
+    "3-color"
+  ],
+  "author": "Anders Brownworth <anders-git@evantide.com>",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "files": [
+    "index.js",
+    "EPDBase.js",
+    "displays/",
+    "example.js",
+    "examples-enhanced.js",
+    "README.md",
+    "LICENSE"
+  ]
+}
