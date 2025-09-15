@@ -41,7 +41,8 @@ async function example() {
     const epd = createEPD('13in3k', '4gray', {
         rstPin: 17,
         dcPin: 25,
-        busyPin: 24
+        busyPin: 24,
+        pwrPin: 18
     });
 
     // Initialize and use
@@ -78,6 +79,7 @@ Creates a display instance for the specified model.
 - `dcPin` (number): Data/Command GPIO pin (default: 25)
 - `busyPin` (number): Busy GPIO pin (default: 24)
 - `csPin` (number): Chip Select GPIO pin (default: 8)
+- `pwrPin` (number): Power control GPIO pin (default: 18)
 - `gpioChip` (string): GPIO chip name (default: 'gpiochip0')
 - `busNumber` (number): SPI bus number (default: 0)
 - `deviceNumber` (number): SPI device number (default: 0)
@@ -95,6 +97,10 @@ Returns array of supported models with their specifications.
 - `await epd.display()` - Update the display with current buffer
 - `await epd.sleep()` - Put display into low power mode
 - `await epd.cleanup()` - Clean up resources
+
+#### Power Control
+- `await epd.powerOn()` - Turn on display power (automatically called during init)
+- `await epd.powerOff()` - Turn off display power (automatically called during cleanup)
 
 #### Drawing Functions
 - `epd.setPixel(x, y, color)` - Set individual pixel
@@ -183,9 +189,91 @@ To add support for a new display model:
 
 ## Hardware Requirements
 
+### System Requirements
 - Raspberry Pi (tested on RPi5) with SPI enabled
-- GPIO pins for RST, DC, CS, and BUSY signals
 - `gpiod` tools installed (`apt install gpiod`)
+- Node.js 14+ (recommended: Node.js 18+)
+
+### GPIO Pin Connections
+The following GPIO pins are required for proper operation:
+
+| Function | Default Pin | Description |
+|----------|-------------|-------------|
+| RST      | GPIO 17     | Reset signal (output) |
+| DC       | GPIO 25     | Data/Command signal (output) |
+| CS       | GPIO 8      | SPI Chip Select (output) |
+| BUSY     | GPIO 24     | Busy status signal (input) |
+| **PWR**  | **GPIO 18** | **Power control (output) - Critical for cold boot operation** |
+
+**Important**: The power pin (PWR) is **essential for reliable operation**, especially when cold-booting the Raspberry Pi. Many Waveshare e-paper displays require explicit power control to function properly. Without this pin, the display may:
+- Not respond to commands after a cold boot
+- Work only after running other display programs first
+- Show inconsistent initialization behavior
+
+### SPI Configuration
+The driver uses SPI interface with these default settings:
+- SPI Bus: `/dev/spidev0.0` (bus 0, device 0)
+- Speed: 4 MHz (configurable)
+- Mode: SPI Mode 0 (CPOL=0, CPHA=0)
+
+### Enable SPI on Raspberry Pi
+```bash
+sudo raspi-config
+# Navigate to: Interfacing Options → SPI → Enable
+# Or add to /boot/config.txt:
+echo "dtparam=spi=on" | sudo tee -a /boot/config.txt
+sudo reboot
+```
+
+## Troubleshooting
+
+### Display Not Working After Cold Boot
+
+**Symptoms**: Display appears to initialize (no errors) but screen doesn't update, or works only after running manufacturer's example programs.
+
+**Cause**: Missing power pin configuration. Many Waveshare displays have internal power management that requires explicit control.
+
+**Solution**: Always specify the power pin in your configuration:
+
+```javascript
+const epd = createEPD('13in3k', 'mono', {
+    rstPin: 17,
+    dcPin: 25,
+    busyPin: 24,
+    pwrPin: 18  // This is critical!
+});
+```
+
+### Common GPIO Issues
+
+**Permission errors**: Make sure you're running with appropriate permissions or add your user to the `gpio` group:
+```bash
+sudo usermod -a -G gpio $USER
+# Then log out and back in
+```
+
+**GPIO already in use**: If you see "Device or resource busy" errors, check what's using the GPIO pins:
+```bash
+# Check what's using GPIO pins
+sudo lsof /dev/gpiomem
+# Or check specific pins
+gpioinfo | grep -E "(17|18|24|25)"
+```
+
+### Raspberry Pi 5 Specific Notes
+
+On Raspberry Pi 5, the GPIO subsystem changed. This driver automatically handles the differences, but if you encounter issues:
+
+1. Ensure `gpiod` tools are installed and up-to-date
+2. The driver uses `gpiochip0` by default, which works correctly on RPi5
+3. If you need to use a different GPIO chip, specify it in options:
+
+```javascript
+const epd = createEPD('13in3k', 'mono', {
+    gpioChip: 'gpiochip4',  // If needed for your setup
+    // ... other pins
+});
+```
 
 ## Examples
 

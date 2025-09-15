@@ -21,7 +21,8 @@ async function example7Color() {
         const epd = createEPD('7in3f', '7color', {
             rstPin: 17,
             dcPin: 25,
-            busyPin: 24
+            busyPin: 24,
+            pwrPin: 18  // Power pin for proper display initialization
         });
 
         console.log(`Display: ${epd.width}x${epd.height}, Colors: 7-color mode`);
@@ -82,7 +83,8 @@ async function example3Color() {
         const epd = createEPD('13in3b', 'red', {
             rstPin: 17,
             dcPin: 25,
-            busyPin: 24
+            busyPin: 24,
+            pwrPin: 18  // Power pin for proper display initialization
         });
 
         console.log(`Display: ${epd.width}x${epd.height}, Colors: 3-color (black/white/red)`);
@@ -139,7 +141,9 @@ async function exampleColorPNG() {
 
     try {
         // Try 7-color display first
-        const epd = createEPD('7in3f', '7color');
+        const epd = createEPD('7in3f', '7color', {
+            pwrPin: 18  // Power pin for proper display initialization
+        });
 
         console.log(`Loading PNG with 7-color conversion: ${epd.width}x${epd.height}`);
 
@@ -179,7 +183,9 @@ async function exampleColorNames() {
     console.log('=== Color Names Example ===');
 
     try {
-        const epd = createEPD('7in3f', '7color');
+        const epd = createEPD('7in3f', '7color', {
+            pwrPin: 18  // Power pin for proper display initialization
+        });
 
         await epd.init();
         await epd.clear();
@@ -236,7 +242,9 @@ async function runAllExamples() {
         ];
 
         displays.forEach(({ name, colorMode }) => {
-            const epd = createEPD(name, colorMode);
+            const epd = createEPD(name, colorMode, {
+                pwrPin: 18  // Power pin for proper display initialization
+            });
             console.log(`✓ Created ${name} (${colorMode}): ${epd.width}x${epd.height}, mode: ${epd.colorMode}`);
 
             // Test drawing functions

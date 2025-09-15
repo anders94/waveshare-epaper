@@ -14,7 +14,8 @@ async function main() {
         const epd = createEPD('13in3k', 'mono', {
             rstPin: 17,
             dcPin: 25,
-            busyPin: 24
+            busyPin: 24,
+            pwrPin: 18  // Power pin for proper display initialization
         });
 
         console.log(`Display: ${epd.width}x${epd.height}, Color mode: ${epd.colorMode}`);
@@ -56,7 +57,8 @@ async function exampleGrayscale() {
         const epd = createEPD('2in7', '4gray', {
             rstPin: 17,
             dcPin: 25,
-            busyPin: 24
+            busyPin: 24,
+            pwrPin: 18  // Power pin for proper display initialization
         });
 
         console.log(`Display: ${epd.width}x${epd.height}, Color mode: ${epd.colorMode}`);
@@ -84,7 +86,9 @@ async function exampleGrayscale() {
 // Example with PNG image loading
 async function examplePNG() {
     try {
-        const epd = createEPD('13in3k', 'mono');
+        const epd = createEPD('13in3k', 'mono', {
+            pwrPin: 18  // Power pin for proper display initialization
+        });
         await epd.init();
         await epd.clear();
 

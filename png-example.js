@@ -7,7 +7,8 @@ async function main() {
         rstPin: 17,        // GPIO 17 for reset
         dcPin: 25,         // GPIO 25 for data/command
         csPin: 8,          // GPIO 8 for chip select
-        busyPin: 24        // GPIO 24 for busy signal
+        busyPin: 24,       // GPIO 24 for busy signal
+        pwrPin: 18         // GPIO 18 for power control
     });
 
     try {

@@ -18,7 +18,8 @@ class EPDBase {
             RST: options.rstPin || 17,
             DC: options.dcPin || 25,
             CS: options.csPin || 8,
-            BUSY: options.busyPin || 24
+            BUSY: options.busyPin || 24,
+            PWR: options.pwrPin || 18
         };
         this.gpioChip = options.gpioChip || 'gpiochip0';
 
@@ -78,9 +79,9 @@ class EPDBase {
     }
 
     async initGPIO() {
-        // Initialize output pins to high (skip CS and BUSY pins)
+        // Initialize output pins to high (skip BUSY pin which is input)
         for (const [name, pin] of Object.entries(this.pins)) {
-            if (name !== 'BUSY' && name !== 'CS') {
+            if (name !== 'BUSY') {
                 await this.writeGPIO(pin, 1);
             }
         }
@@ -486,6 +487,16 @@ class EPDBase {
         }
     }
 
+    async powerOn() {
+        await this.writeGPIO(this.pins.PWR, 1);
+        await this.delay(100);
+    }
+
+    async powerOff() {
+        await this.writeGPIO(this.pins.PWR, 0);
+        await this.delay(100);
+    }
+
     async sleep() {
         await this.sendCommand(0x10);
         await this.sendData(0x01);
@@ -498,6 +509,13 @@ class EPDBase {
             } catch (error) {
                 // Ignore errors during cleanup
             }
+        }
+
+        // Power down the display
+        try {
+            await this.powerOff();
+        } catch (error) {
+            // Ignore errors during cleanup
         }
     }
 
