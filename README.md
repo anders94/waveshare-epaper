@@ -7,7 +7,7 @@ A modular Node.js driver for Waveshare E-Paper displays that supports multiple d
 ## Features
 
 - **Modular architecture**: Easy to extend with new display models
-- **Multiple display support**: Currently supports 7+ display models with more easily added
+- **Multiple display support**: Currently supports 8+ display models with more easily added
 - **Color mode support**: Monochrome, grayscale and color modes where supported by hardware
 - **Common API**: Unified interface across all display models
 - **Hardware abstraction**: Base class handles common SPI/GPIO operations
@@ -17,15 +17,16 @@ A modular Node.js driver for Waveshare E-Paper displays that supports multiple d
 
 Not all devices have been tested in the field. Please create a GitHub issue if you have confirmed one of the untested platforms working.
 
-| Model   | Resolution | Color Modes       | Description                     | Status            |
-|---------|------------|-------------------|---------------------------------|-------------------|
-| 2in13   | 122 × 250  | Monochrome        | 2.13" black/white               | Untested
-| 2in7    | 176 × 264  | Mono, 4-grayscale | 2.7" with grayscale support     | Untested
-| 2in7b   | 176 × 264  | 3-color           | 2.7" black/white/red or yellow  | Untested
-| 7in5    | 640 × 384  | Monochrome        | 7.5" black/white                | Confirmed working
-| 7in3f   | 800 × 480  | 7-color           | 7.3" full color (7 colors)      | Untested
-| 13in3k  | 960 × 680  | Mono, 4-grayscale | 13.3" with grayscale support    | Confirmed working
-| 13in3b  | 960 × 680  | 3-color           | 13.3" black/white/red or yellow | Untested
+| Model     | Resolution  | Color Modes       | Description                        | Status            |
+|-----------|-------------|-------------------|------------------------------------|-------------------|
+| 2in13     | 122 × 250   | Monochrome        | 2.13" black/white                  | Untested          |
+| 2in7      | 176 × 264   | Mono, 4-grayscale | 2.7" with grayscale support        | Untested          |
+| 2in7b     | 176 × 264   | 3-color           | 2.7" black/white/red or yellow     | Untested          |
+| 7in5      | 640 × 384   | Monochrome        | 7.5" black/white                   | Confirmed working |
+| 7in3f     | 800 × 480   | 7-color           | 7.3" full color (7 colors)         | Untested          |
+| 13in3k    | 960 × 680   | Mono, 4-grayscale | 13.3" with grayscale support       | Confirmed working |
+| 13in3b    | 960 × 680   | 3-color           | 13.3" black/white/red or yellow    | Untested          |
+| 13in3gray | 1600 × 1200 | 16-grayscale      | 13.3" 16-level grayscale (IT8951)  | Untested          |
 
 ## Installation
 
@@ -62,6 +63,32 @@ async function example() {
     await epd.sleep();
 }
 
+// 16-grayscale example (IT8951 controller)
+async function grayscaleExample() {
+    const epd = createEPD('13in3gray', '16gray', {
+        rstPin: 17,
+        dcPin: 25,
+        busyPin: 24,
+        pwrPin: 18,
+        vcom: -2.30  // Adjust according to your display
+    });
+
+    await epd.init();
+    await epd.clear();
+
+    // Draw with 16 different gray levels (0=black, 15=white)
+    const cellWidth = 100;
+    for (let i = 0; i < 16; i++) {
+        const x = (i % 8) * cellWidth;
+        const y = Math.floor(i / 8) * 60;
+        epd.drawRect(x, y, cellWidth - 2, 58, i, true);
+    }
+
+    // Display with high quality GC16 mode
+    await epd.display('GC16');
+    await epd.sleep();
+}
+
 // Canvas example (requires: npm install canvas)
 async function canvasExample() {
     const { createCanvas } = require('canvas');
@@ -95,6 +122,7 @@ async function canvasExample() {
 }
 
 example().catch(console.error);
+// grayscaleExample().catch(console.error);
 ```
 
 ## API Reference
@@ -104,8 +132,8 @@ example().catch(console.error);
 #### `createEPD(model, colorMode, options)`
 Creates a display instance for the specified model.
 
-- `model` (string): Display model ('2in13', '2in7', '2in7b', '7in5', '7in3f', '13in3k', '13in3b')
-- `colorMode` (string): Color mode ('mono', '4gray', '3color', '7color') - must be supported by the display
+- `model` (string): Display model ('2in13', '2in7', '2in7b', '7in5', '7in3f', '13in3k', '13in3b', '13in3gray')
+- `colorMode` (string): Color mode ('mono', '4gray', '16gray', '3color', '7color') - must be supported by the display
 - `options` (object): Configuration options
 
 **Options:**
@@ -119,6 +147,7 @@ Creates a display instance for the specified model.
 - `deviceNumber` (number): SPI device number (default: 0)
 - `maxSpeedHz` (number): SPI max speed (default: 4000000)
 - `accentColor` (string): For 3-color displays, specify 'red' or 'yellow' accent color
+- `vcom` (number): VCOM voltage for IT8951 displays (default: -2.30)
 
 #### `getSupportedModels()`
 Returns array of supported models with their specifications.
@@ -158,6 +187,7 @@ Returns array of supported models with their specifications.
 #### Color Values
 - **Monochrome mode**: `0` = black, `1` = white
 - **4-grayscale mode**: `0` = black, `1` = dark gray, `2` = light gray, `3` = white
+- **16-grayscale mode**: `0` = black, `1-14` = varying gray levels, `15` = white
 - **3-color mode**: `0` = black, `1` = white, `2` = accent color (red or yellow, configurable)
 - **7-color mode**: `0` = black, `1` = white, `2` = green, `3` = blue, `4` = red, `5` = yellow, `6` = orange
 
@@ -184,7 +214,8 @@ Available colors: `BLACK`, `WHITE`, `RED`, `GREEN`, `BLUE`, `YELLOW`, `ORANGE`
 │   ├── EPD7in5.js         # 7.5" monochrome display driver
 │   ├── EPD7in3f.js        # 7.3" 7-color display driver
 │   ├── EPD13in3k.js       # 13.3" mono/4-grayscale display driver
-│   └── EPD13in3b.js       # 13.3" 3-color display driver
+│   ├── EPD13in3b.js       # 13.3" 3-color display driver
+│   └── EPD13in3Gray.js    # 13.3" 16-grayscale display driver (IT8951)
 ├── example.js             # Basic usage examples
 ├── examples-enhanced.js   # Enhanced examples with color displays
 ├── canvas-example.js      # HTML5 Canvas rendering example with TrueType fonts

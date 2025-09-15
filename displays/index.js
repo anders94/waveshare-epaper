@@ -5,6 +5,7 @@ const EPD7in5 = require('./EPD7in5');
 const EPD7in3f = require('./EPD7in3f');
 const EPD13in3k = require('./EPD13in3k');
 const EPD13in3b = require('./EPD13in3b');
+const EPD13in3Gray = require('./EPD13in3Gray');
 
 module.exports = {
     EPD2in13,
@@ -14,6 +15,7 @@ module.exports = {
     EPD7in3f,
     EPD13in3k,
     EPD13in3b,
+    EPD13in3Gray,
 
     // Convenience function to create display by model name
     createDisplay: (model, colorMode, options = {}) => {
@@ -56,8 +58,14 @@ module.exports = {
             case '13.3b':
                 return EPD13in3b.create3Color(colorMode || 'red', options);
 
+            case '13in3gray':
+            case '13.3gray':
+            case '13in3_16gray':
+            case '13.3_16gray':
+                return EPD13in3Gray.create16Gray(options);
+
             default:
-                throw new Error(`Unsupported display model: ${model}. Supported models: 2in13, 2in7, 2in7b, 7in5, 7in3f, 13in3k, 13in3b`);
+                throw new Error(`Unsupported display model: ${model}. Supported models: 2in13, 2in7, 2in7b, 7in5, 7in3f, 13in3k, 13in3b, 13in3gray`);
         }
     },
 
@@ -70,7 +78,8 @@ module.exports = {
             { model: '7in5', size: '640x384', colorModes: ['mono'], description: '7.5" monochrome' },
             { model: '7in3f', size: '800x480', colorModes: ['7color'], description: '7.3" full color (7 colors)' },
             { model: '13in3k', size: '960x680', colorModes: ['mono', '4gray'], description: '13.3" mono/4-grayscale' },
-            { model: '13in3b', size: '960x680', colorModes: ['3color'], description: '13.3" black/white/red' }
+            { model: '13in3b', size: '960x680', colorModes: ['3color'], description: '13.3" black/white/red' },
+            { model: '13in3gray', size: '1600x1200', colorModes: ['16gray'], description: '13.3" 16-level grayscale (IT8951)' }
         ];
     }
 };
