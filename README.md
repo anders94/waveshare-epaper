@@ -190,9 +190,41 @@ To add support for a new display model:
 ## Hardware Requirements
 
 ### System Requirements
-- Raspberry Pi (tested on RPi5) with SPI enabled
+- Raspberry Pi with SPI enabled
 - `gpiod` tools installed (`apt install gpiod`)
 - Node.js 14+ (recommended: Node.js 18+)
+
+### Raspberry Pi Model Compatibility
+
+| Model | GPIO Chip | Pin Layout | SPI Interface | Initialization Notes |
+|-------|-----------|------------|---------------|---------------------|
+| Pi 1 Model A/B | `gpiochip0` | 26-pin (original) | `/dev/spidev0.0` | Limited pins, use adapted wiring |
+| Pi 1 Model A+/B+ | `gpiochip0` | 40-pin | `/dev/spidev0.0` | Full compatibility |
+| Pi 2 Model B | `gpiochip0` | 40-pin | `/dev/spidev0.0` | Full compatibility |
+| Pi 3 Model A+/B+ | `gpiochip0` | 40-pin | `/dev/spidev0.0` | Full compatibility |
+| Pi 4 Model B | `gpiochip0` | 40-pin | `/dev/spidev0.0` | Full compatibility |
+| **Pi 5** | **`gpiochip4`** | 40-pin | `/dev/spidev0.0` | **Requires gpioChip option** |
+
+#### Raspberry Pi 5 Configuration
+**Critical**: Pi 5 uses `gpiochip4` instead of `gpiochip0`. You **must** specify this in your configuration or initialization will fail:
+
+```javascript
+const epd = createEPD('13in3k', 'mono', {
+    rstPin: 17,
+    dcPin: 25,
+    busyPin: 24,
+    pwrPin: 18,
+    gpioChip: 'gpiochip4'  // Required for Pi 5
+});
+```
+
+#### Legacy Pi Models (26-pin)
+Original Pi 1 Model A/B have only 26 GPIO pins. Use this pin mapping:
+- RST: GPIO 17 ✓ (available)
+- DC: GPIO 25 ✓ (available)
+- CS: GPIO 8 ✓ (available)
+- BUSY: GPIO 24 ✓ (available)
+- PWR: GPIO 18 ✓ (available)
 
 ### GPIO Pin Connections
 The following GPIO pins are required for proper operation:
@@ -260,18 +292,28 @@ sudo lsof /dev/gpiomem
 gpioinfo | grep -E "(17|18|24|25)"
 ```
 
-### Raspberry Pi 5 Specific Notes
+### Auto-Detection and Troubleshooting
 
-On Raspberry Pi 5, the GPIO subsystem changed. This driver automatically handles the differences, but if you encounter issues:
+#### Checking Your GPIO Chip
+If you're unsure which GPIO chip your Pi uses, run:
+```bash
+gpioinfo | head -n 1
+```
 
-1. Ensure `gpiod` tools are installed and up-to-date
-2. The driver uses `gpiochip0` by default, which works correctly on RPi5
-3. If you need to use a different GPIO chip, specify it in options:
+For Pi 5, you'll see: `gpiochip4 - 54 lines`
+For older Pi models: `gpiochip0 - 54 lines` (or similar)
 
+#### Environment Variable (Alternative)
+You can also set the GPIO chip via environment variable:
+```bash
+export GPIO_CHIP=gpiochip4  # For Pi 5
+node your-epd-program.js
+```
+
+Then check for this variable in your code:
 ```javascript
 const epd = createEPD('13in3k', 'mono', {
-    gpioChip: 'gpiochip4',  // If needed for your setup
-    // ... other pins
+    gpioChip: process.env.GPIO_CHIP || 'gpiochip0'
 });
 ```
 
