@@ -18,8 +18,9 @@
   },
   "homepage": "https://github.com/anders94/waveshare-epaper#readme",
   "dependencies": {
-    "spi-device": "^3.1.2",
-    "pngjs": "^7.0.0"
+    "canvas": "^3.2.0",
+    "pngjs": "^7.0.0",
+    "spi-device": "^3.1.2"
   },
   "keywords": [
     "waveshare",

@@ -60,6 +60,38 @@ async function example() {
     await epd.sleep();
 }
 
+// Canvas example (requires: npm install canvas)
+async function canvasExample() {
+    const { createCanvas } = require('canvas');
+    const epd = createEPD('13in3k', '4gray', {
+        rstPin: 17, dcPin: 25, busyPin: 24, pwrPin: 18
+    });
+
+    await epd.init();
+
+    // Create a simple canvas
+    const canvas = createCanvas(400, 200);
+    const ctx = canvas.getContext('2d');
+
+    // White background
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Draw text and shapes
+    ctx.fillStyle = 'black';
+    ctx.font = '36px Arial';
+    ctx.fillText('Canvas Demo', 50, 100);
+
+    ctx.strokeStyle = 'gray';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(10, 10, 380, 180);
+
+    // Draw to display
+    await epd.drawCanvas(canvas, 100, 100);
+    await epd.display();
+    await epd.sleep();
+}
+
 example().catch(console.error);
 ```
 
@@ -107,6 +139,7 @@ Returns array of supported models with their specifications.
 - `epd.drawLine(x0, y0, x1, y1, color)` - Draw line
 - `epd.drawRect(x, y, width, height, color, filled)` - Draw rectangle
 - `await epd.drawPNG(filePath, x, y)` - Load and draw PNG image
+- `await epd.drawCanvas(canvas, x, y)` - Draw HTML5 Canvas object
 
 #### Enhanced Drawing (Color Displays)
 **7-color displays:**
@@ -152,6 +185,7 @@ Available colors: `BLACK`, `WHITE`, `RED`, `GREEN`, `BLUE`, `YELLOW`, `ORANGE`
 │   └── EPD13in3b.js       # 13.3" 3-color display driver
 ├── example.js             # Basic usage examples
 ├── examples-enhanced.js   # Enhanced examples with color displays
+├── canvas-example.js      # HTML5 Canvas rendering example with TrueType fonts
 └── README.md              # This file
 ```
 
@@ -325,6 +359,15 @@ See `example.js` for basic usage examples including:
 - 4-grayscale mode with different gray levels
 - PNG image loading and display
 
+### Canvas Example
+See `canvas-example.js` for HTML5 Canvas rendering:
+- TrueType font rendering with custom fonts
+- Dynamic text and graphics generation
+- Date/time display with styling
+- Full Canvas API usage
+
+Run with: `sudo node canvas-example.js /path/to/font.ttf [x] [y]`
+
 ### Enhanced Examples
 See `examples-enhanced.js` for advanced color examples:
 
@@ -361,6 +404,53 @@ epd.drawRedRect(300, 50, 200, 100, true);   // Accent color rectangle
 // Show test pattern
 await epd.show3ColorTest();
 ```
+
+#### Canvas Support
+The `drawCanvas()` method allows rendering HTML5 Canvas objects directly to the display. This enables dynamic text rendering with TrueType fonts, graphics drawing, and complex layouts:
+
+```javascript
+const { createCanvas, registerFont } = require('canvas');
+
+// Register a TrueType font
+registerFont('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', { family: 'MyFont' });
+
+// Create and configure canvas
+const canvas = createCanvas(800, 400);
+const ctx = canvas.getContext('2d');
+
+// White background
+ctx.fillStyle = 'white';
+ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+// Draw text with custom font
+ctx.fillStyle = 'black';
+ctx.font = '48px MyFont';
+ctx.textAlign = 'center';
+ctx.fillText('Hello E-Paper!', canvas.width / 2, canvas.height / 2);
+
+// Draw graphics
+ctx.strokeStyle = 'black';
+ctx.lineWidth = 3;
+ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
+
+// Render to display
+await epd.drawCanvas(canvas, 0, 0);
+```
+
+**Canvas Features:**
+- TrueType font rendering with `canvas` package
+- Text, shapes, gradients, and complex graphics
+- Automatic color conversion for all display modes
+- Transparency support (transparent pixels become background color)
+- Full HTML5 Canvas API compatibility
+
+**Requirements:**
+Install the `canvas` package for Canvas support:
+```bash
+npm install canvas
+```
+
+See `canvas-example.js` for a complete working example.
 
 #### Advanced Color Detection
 The driver automatically converts PNG images to the appropriate color format:

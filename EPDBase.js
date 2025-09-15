@@ -487,6 +487,48 @@ class EPDBase {
         }
     }
 
+    // Draw Canvas object at specified coordinates
+    async drawCanvas(canvas, x = 0, y = 0) {
+        const ctx = canvas.getContext('2d');
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+        console.log(`Drawing Canvas: ${canvas.width}x${canvas.height} at (${x}, ${y})`);
+
+        // Draw each pixel, checking bounds
+        for (let py = 0; py < canvas.height; py++) {
+            for (let px = 0; px < canvas.width; px++) {
+                const screenX = x + px;
+                const screenY = y + py;
+
+                // Skip pixels outside display bounds
+                if (screenX >= this.width || screenY >= this.height || screenX < 0 || screenY < 0) {
+                    continue;
+                }
+
+                const dataIndex = (py * canvas.width + px) * 4;
+                const r = imageData.data[dataIndex];
+                const g = imageData.data[dataIndex + 1];
+                const b = imageData.data[dataIndex + 2];
+                const a = imageData.data[dataIndex + 3];
+
+                // Handle transparency - treat transparent as white/background
+                let pixelValue;
+                if (a < 128) {
+                    // Transparent pixels become background color
+                    if (this.colorMode === 'mono') pixelValue = 1; // White
+                    else if (this.colorMode === '4gray') pixelValue = 3; // White
+                    else if (this.colorMode === '3color') pixelValue = 1; // White
+                    else if (this.colorMode === '7color') pixelValue = this.colors.WHITE;
+                    else pixelValue = 1;
+                } else {
+                    pixelValue = this.rgbToColor(r, g, b);
+                }
+
+                this.setPixel(screenX, screenY, pixelValue);
+            }
+        }
+    }
+
     async powerOn() {
         await this.writeGPIO(this.pins.PWR, 1);
         await this.delay(100);
