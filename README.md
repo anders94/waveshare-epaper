@@ -272,7 +272,7 @@ const epd = createEPD('13in3k', 'mono', {
     rstPin: 17,
     dcPin: 25,
     busyPin: 24,
-    pwrPin: 18  // This is critical!
+    pwrPin: 18
 });
 ```
 
