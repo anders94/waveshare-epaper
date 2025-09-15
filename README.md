@@ -15,15 +15,17 @@ A modular Node.js driver for Waveshare E-Paper displays that supports multiple d
 
 ## Supported Displays
 
-| Model   | Resolution | Color Modes        | Description |
-|---------|------------|-------------------|-------------|
-| 2in13   | 122 × 250  | Monochrome        | 2.13" black/white |
-| 2in7    | 176 × 264  | Mono, 4-grayscale | 2.7" with grayscale support |
-| 2in7b   | 176 × 264  | 3-color           | 2.7" black/white/red or yellow |
-| 7in5    | 640 × 384  | Monochrome        | 7.5" black/white |
-| 7in3f   | 800 × 480  | 7-color           | 7.3" full color (7 colors) |
-| 13in3k  | 960 × 680  | Mono, 4-grayscale | 13.3" with grayscale support |
-| 13in3b  | 960 × 680  | 3-color           | 13.3" black/white/red or yellow |
+Not all devices have been tested in the field. Please create a GitHub issue if you have confirmed one of the untested platforms working.
+
+| Model   | Resolution | Color Modes       | Description | Status |
+|---------|------------|-------------------|-------------|--------|
+| 2in13   | 122 × 250  | Monochrome        | 2.13" black/white | Untested
+| 2in7    | 176 × 264  | Mono, 4-grayscale | 2.7" with grayscale support | Untested
+| 2in7b   | 176 × 264  | 3-color           | 2.7" black/white/red or yellow | Untested
+| 7in5    | 640 × 384  | Monochrome        | 7.5" black/white | Confirmed working
+| 7in3f   | 800 × 480  | 7-color           | 7.3" full color (7 colors) | Untested
+| 13in3k  | 960 × 680  | Mono, 4-grayscale | 13.3" with grayscale support | Confirmed working
+| 13in3b  | 960 × 680  | 3-color           | 13.3" black/white/red or yellow | Untested
 
 ## Installation
 
