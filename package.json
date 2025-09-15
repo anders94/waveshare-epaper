@@ -1,5 +1,5 @@
 {
-  "name": "@anders94/waveshare-epaper",
+  "name": "waveshare-epaper",
   "version": "0.1.1",
   "description": "A modular Node.js driver for Waveshare E-Paper displays that supports multiple display models with different resolutions and color modes",
   "main": "index.js",
