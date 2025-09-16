@@ -34,6 +34,19 @@ Not all devices have been tested in the field. Please create a GitHub issue if y
 npm install waveshare-epaper
 ```
 
+### GPIO Permissions (Recommended)
+For security, add your user to the `gpio` group instead of running as root:
+
+```bash
+# Add current user to gpio group
+sudo usermod -a -G gpio $USER
+
+# Log out and back in, then verify group membership
+groups
+```
+
+After logging back in, you can run GPIO programs without `sudo`. If you still encounter permission issues, `sudo` can be used as a fallback, though it's less secure.
+
 ## Quick Start
 
 ```javascript

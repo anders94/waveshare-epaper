@@ -130,6 +130,16 @@ Shows the capabilities of large displays with:
 - Node.js 14+ installed
 - GPIO tools: `sudo apt install gpiod`
 
+### GPIO Permissions Setup
+For security, add your user to the `gpio` group instead of running as root:
+
+```bash
+# Add current user to gpio group (one-time setup)
+sudo usermod -a -G gpio $USER
+
+# Log out and back in for changes to take effect
+```
+
 ### Basic Usage
 ```bash
 # Clone or install the waveshare-epaper package
@@ -138,7 +148,10 @@ npm install waveshare-epaper
 # Copy any example to your project
 cp node_modules/waveshare-epaper/examples/monochrome-basic.js .
 
-# Run with appropriate permissions
+# Run normally (after gpio group setup)
+node monochrome-basic.js
+
+# Or as fallback if gpio group doesn't work
 sudo node monochrome-basic.js
 ```
 
@@ -203,5 +216,5 @@ main();
 
 - All examples put the display to sleep after updating, which preserves the image
 - Examples include proper error handling and cleanup
-- GPIO permissions may require `sudo` or adding your user to the `gpio` group
+- GPIO permissions: add your user to the `gpio` group (recommended) or use `sudo` as fallback
 - Each example is self-contained and ready to copy to your projects
