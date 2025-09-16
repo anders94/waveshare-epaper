@@ -10,7 +10,7 @@ const Displays = require('./displays');
  * @param {object} options - Configuration options (GPIO pins, SPI settings, etc.)
  * @returns {EPDBase} Display instance
  */
-function createEPD(model, colorMode = 'mono', options = {}) {
+function createDisplay(model, colorMode = 'mono', options = {}) {
     return Displays.createDisplay(model, colorMode, options);
 }
 
@@ -23,10 +23,7 @@ function getSupportedModels() {
 }
 
 module.exports = {
-    createEPD,
+    createDisplay,
     getSupportedModels,
-    Displays,
-
-    // Backward compatibility - export the original 13in3k class
-    EPD13in3k: Displays.EPD13in3k.EPD13in3k
+    Displays
 };
