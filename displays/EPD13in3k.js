@@ -12,6 +12,17 @@ class EPD13in3k extends EPDBase {
         this.initializeBuffer();
     }
 
+    initializeBuffer() {
+        if (this.colorMode === '4gray') {
+            // For 4-gray mode, we need 2 bytes per monochrome byte (as per C code)
+            const monoBufferSize = Math.ceil(this.width * this.height / 8);
+            this.imageBuffer = Buffer.alloc(monoBufferSize * 2);
+        } else {
+            // Monochrome mode
+            this.imageBuffer = Buffer.alloc(Math.ceil(this.width * this.height / 8));
+        }
+    }
+
     async initDisplay() {
         await this.waitUntilIdle();
 
@@ -85,19 +96,127 @@ class EPD13in3k extends EPDBase {
         // Set cursor to start position
         await this.setCursor(0, 0);
 
-        // Write RAM (black and white)
-        await this.sendCommand(0x24);
+        if (this.colorMode === '4gray') {
+            await this.display4Gray();
+        } else {
+            // Monochrome mode
+            await this.sendCommand(0x24);
 
-        // Send image data in chunks
+            // Send image data in chunks
+            const chunkSize = 4096;
+            for (let i = 0; i < this.imageBuffer.length; i += chunkSize) {
+                const chunk = this.imageBuffer.slice(i, Math.min(i + chunkSize, this.imageBuffer.length));
+                await this.sendData(Array.from(chunk));
+            }
+
+            // Display update
+            await this.sendCommand(0x22);
+            await this.sendData(0xF7);
+            await this.sendCommand(0x20);
+            await this.waitUntilIdle();
+        }
+    }
+
+    async display4Gray() {
+        const height = this.height;
+        const width = Math.floor(this.width / 8);
+        const totalPixels = height * width;
+
+        // Prepare both buffers
+        const buffer1 = Buffer.alloc(totalPixels);
+        const buffer2 = Buffer.alloc(totalPixels);
+
+        for (let i = 0; i < totalPixels; i++) {
+            let temp3_1 = 0; // For first buffer
+            let temp3_2 = 0; // For second buffer
+
+            for (let j = 0; j < 2; j++) {
+                let temp1 = this.imageBuffer[i * 2 + j];
+
+                for (let k = 0; k < 2; k++) {
+                    let temp2 = temp1 & 0xC0;
+
+                    // First buffer logic
+                    if (temp2 === 0xC0) {
+                        temp3_1 |= 0x00; // White
+                    } else if (temp2 === 0x00) {
+                        temp3_1 |= 0x01; // Black
+                    } else if (temp2 === 0x80) {
+                        temp3_1 |= 0x01; // Gray1
+                    } else { // 0x40
+                        temp3_1 |= 0x00; // Gray2
+                    }
+
+                    // Second buffer logic
+                    if (temp2 === 0xC0) {
+                        temp3_2 |= 0x00; // White
+                    } else if (temp2 === 0x00) {
+                        temp3_2 |= 0x01; // Black
+                    } else if (temp2 === 0x80) {
+                        temp3_2 |= 0x00; // Gray1
+                    } else { // 0x40
+                        temp3_2 |= 0x01; // Gray2
+                    }
+
+                    temp3_1 <<= 1;
+                    temp3_2 <<= 1;
+
+                    temp1 <<= 2;
+                    temp2 = temp1 & 0xC0;
+
+                    // First buffer logic
+                    if (temp2 === 0xC0) {
+                        temp3_1 |= 0x00;
+                    } else if (temp2 === 0x00) {
+                        temp3_1 |= 0x01;
+                    } else if (temp2 === 0x80) {
+                        temp3_1 |= 0x01;
+                    } else { // 0x40
+                        temp3_1 |= 0x00;
+                    }
+
+                    // Second buffer logic
+                    if (temp2 === 0xC0) {
+                        temp3_2 |= 0x00;
+                    } else if (temp2 === 0x00) {
+                        temp3_2 |= 0x01;
+                    } else if (temp2 === 0x80) {
+                        temp3_2 |= 0x00;
+                    } else { // 0x40
+                        temp3_2 |= 0x01;
+                    }
+
+                    if (!(j === 1 && k === 1)) {
+                        temp3_1 <<= 1;
+                        temp3_2 <<= 1;
+                    }
+
+                    temp1 <<= 2;
+                }
+            }
+
+            buffer1[i] = temp3_1;
+            buffer2[i] = temp3_2;
+        }
+
+        // Send first buffer (0x24 command)
+        await this.sendCommand(0x24);
         const chunkSize = 4096;
-        for (let i = 0; i < this.imageBuffer.length; i += chunkSize) {
-            const chunk = this.imageBuffer.slice(i, Math.min(i + chunkSize, this.imageBuffer.length));
+        for (let i = 0; i < buffer1.length; i += chunkSize) {
+            const chunk = buffer1.slice(i, Math.min(i + chunkSize, buffer1.length));
             await this.sendData(Array.from(chunk));
         }
 
-        // Display update
+        // Send second buffer (0x26 command)
+        await this.sendCommand(0x26);
+        for (let i = 0; i < buffer2.length; i += chunkSize) {
+            const chunk = buffer2.slice(i, Math.min(i + chunkSize, buffer2.length));
+            await this.sendData(Array.from(chunk));
+        }
+
+        // Display update for 4-gray
         await this.sendCommand(0x22);
-        await this.sendData(0xF7);
+        await this.sendData(0xC7);
         await this.sendCommand(0x20);
         await this.waitUntilIdle();
     }

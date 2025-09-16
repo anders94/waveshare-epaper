@@ -203,7 +203,9 @@ class EPDBase {
         if (this.colorMode === 'mono') {
             this.imageBuffer.fill(0xFF);
         } else if (this.colorMode === '4gray') {
-            this.imageBuffer.fill(0xFF); // All white pixels (3 = white in 4gray mode)
+            // For 4-gray mode, white = 0xC0 -> top 2 bits = 11
+            // 4 white pixels per byte = 11 11 11 11 = 0xFF
+            this.imageBuffer.fill(0xFF);
         } else if (this.colorMode === '3color') {
             this.imageBuffer.fill(0xFF); // White background
             if (this.colorBuffer) this.colorBuffer.fill(0x00); // No color
@@ -249,15 +251,26 @@ class EPDBase {
                 this.imageBuffer[byteIndex] |= (1 << bitIndex);
             }
         } else if (this.colorMode === '4gray') {
+            // For 4-gray mode, store pixels in format expected by C encoding algorithm
             const pixelIndex = x + y * this.width;
             const byteIndex = Math.floor(pixelIndex / 4);
             const pixelPos = pixelIndex % 4;
-            const bitShift = (3 - pixelPos) * 2;
+            const bitShift = 6 - (pixelPos * 2); // Top 2 bits first: 6,4,2,0
 
-            // Clear the 2 bits for this pixel
-            this.imageBuffer[byteIndex] &= ~(0x03 << bitShift);
-            // Set the new value
-            this.imageBuffer[byteIndex] |= ((color & 0x03) << bitShift);
+            // Based on your actual test results (mapping appears inverted):
+            let rawValue;
+            switch (color) {
+                case 0: rawValue = 0x00; break; // Black -> 00 (darkest available)
+                case 1: rawValue = 0x01; break; // Dark gray -> 01
+                case 2: rawValue = 0x02; break; // Light gray -> 10
+                case 3: rawValue = 0x03; break; // White -> 11
+                default: rawValue = 0x03; break; // Default to white
+            }
+
+            // Clear the 2 bits for this pixel and set new value
+            const mask = 0x03 << bitShift; // Create mask for 2 bits at correct position
+            this.imageBuffer[byteIndex] &= ~mask; // Clear the bits
+            this.imageBuffer[byteIndex] |= (rawValue << bitShift); // Set the bits
         } else if (this.colorMode === '3color') {
             // For 3-color displays, color parameter can be:
             // 0 = black, 1 = white, 2 = red/yellow (accent color)
