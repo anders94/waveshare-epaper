@@ -395,6 +395,23 @@ const epd = createDisplay('13in3k', 'mono', {
 });
 ```
 
+### Cairo Error
+
+If while loading canvas you get this error:
+
+```
+Error: libcairo.so.2: ELF load command address/offset not page-aligned
+```
+
+Tru removing canvas and re-installing by compiling from source.
+
+```
+rm -fr node_modules/canvas/
+npm install canvas --build-from-source
+```
+
+This can happen if you compile Node.js from source because the precompiled ciaro library that comes with canvas might not be compatible with what you have.
+
 ## Examples
 
 See the [examples/](examples/) directory for working examples of each feature. Each example demonstrates a specific capability and can be copied directly into your projects.
