@@ -140,7 +140,7 @@ Creates a display instance for the specified model.
 - `rstPin` (number): Reset GPIO pin (default: 17)
 - `dcPin` (number): Data/Command GPIO pin (default: 25)
 - `busyPin` (number): Busy GPIO pin (default: 24)
-- `csPin` (number): Chip Select GPIO pin (default: 8)
+- `csPin` (number): Chip Select GPIO pin (default: 22)
 - `pwrPin` (number): Power control GPIO pin (default: 18)
 - `gpioChip` (string): GPIO chip name (default: 'gpiochip0')
 - `busNumber` (number): SPI bus number (default: 0)
@@ -289,7 +289,7 @@ const epd = createEPD('13in3k', 'mono', {
 Original Pi 1 Model A/B have only 26 GPIO pins. Use this pin mapping:
 - RST: GPIO 17 ✓ (available)
 - DC: GPIO 25 ✓ (available)
-- CS: GPIO 8 ✓ (available)
+- CS: GPIO 22 ✓ (available)
 - BUSY: GPIO 24 ✓ (available)
 - PWR: GPIO 18 ✓ (available)
 
@@ -300,7 +300,7 @@ The following GPIO pins are required for proper operation:
 |----------|-------------|-------------|
 | RST      | GPIO 17     | Reset signal (output) |
 | DC       | GPIO 25     | Data/Command signal (output) |
-| CS       | GPIO 8      | SPI Chip Select (output) |
+| CS       | GPIO 22     | SPI Chip Select (output) |
 | BUSY     | GPIO 24     | Busy status signal (input) |
 | **PWR**  | **GPIO 18** | **Power control (output) - Critical for cold boot operation** |
 

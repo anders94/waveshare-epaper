@@ -17,7 +17,7 @@ class EPDBase {
         this.pins = {
             RST: options.rstPin || 17,
             DC: options.dcPin || 25,
-            CS: options.csPin || 8,
+            CS: options.csPin || 22,
             BUSY: options.busyPin || 24,
             PWR: options.pwrPin || 18
         };
