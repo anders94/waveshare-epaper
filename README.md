@@ -37,11 +37,11 @@ npm install waveshare-epaper
 ## Quick Start
 
 ```javascript
-const { createEPD } = require('waveshare-epaper');
+const { createDisplay } = require('waveshare-epaper');
 
 async function example() {
     // Create display instance (13.3" 4-grayscale)
-    const epd = createEPD('13in3k', '4gray', {
+    const epd = createDisplay('13in3k', '4gray', {
         rstPin: 17,
         dcPin: 25,
         busyPin: 24,
@@ -65,7 +65,7 @@ async function example() {
 
 // 16-grayscale example (IT8951 controller)
 async function grayscaleExample() {
-    const epd = createEPD('13in3gray', '16gray', {
+    const epd = createDisplay('13in3gray', '16gray', {
         rstPin: 17,
         dcPin: 25,
         busyPin: 24,
@@ -92,7 +92,7 @@ async function grayscaleExample() {
 // Canvas example (requires: npm install canvas)
 async function canvasExample() {
     const { createCanvas } = require('canvas');
-    const epd = createEPD('13in3k', '4gray', {
+    const epd = createDisplay('13in3k', '4gray', {
         rstPin: 17, dcPin: 25, busyPin: 24, pwrPin: 18
     });
 
@@ -129,7 +129,7 @@ example().catch(console.error);
 
 ### Factory Functions
 
-#### `createEPD(model, colorMode, options)`
+#### `createDisplay(model, colorMode, options)`
 Creates a display instance for the specified model.
 
 - `model` (string): Display model ('2in13', '2in7', '2in7b', '7in5', '7in3f', '13in3k', '13in3b', '13in3gray')
@@ -216,9 +216,7 @@ Available colors: `BLACK`, `WHITE`, `RED`, `GREEN`, `BLUE`, `YELLOW`, `ORANGE`
 │   ├── EPD13in3k.js       # 13.3" mono/4-grayscale display driver
 │   ├── EPD13in3b.js       # 13.3" 3-color display driver
 │   └── EPD13in3Gray.js    # 13.3" 16-grayscale display driver (IT8951)
-├── example.js             # Basic usage examples
-├── examples-enhanced.js   # Enhanced examples with color displays
-├── canvas-example.js      # HTML5 Canvas rendering example with TrueType fonts
+├── examples/              # Usage examples for each feature
 └── README.md              # This file
 ```
 
@@ -263,20 +261,20 @@ To add support for a new display model:
 
 ### Raspberry Pi Model Compatibility
 
-| Model | GPIO Chip | Pin Layout | SPI Interface | Initialization Notes |
-|-------|-----------|------------|---------------|---------------------|
-| Pi 1 Model A/B | `gpiochip0` | 26-pin (original) | `/dev/spidev0.0` | Limited pins, use adapted wiring |
-| Pi 1 Model A+/B+ | `gpiochip0` | 40-pin | `/dev/spidev0.0` | Full compatibility |
-| Pi 2 Model B | `gpiochip0` | 40-pin | `/dev/spidev0.0` | Full compatibility |
-| Pi 3 Model A+/B+ | `gpiochip0` | 40-pin | `/dev/spidev0.0` | Full compatibility |
-| Pi 4 Model B | `gpiochip0` | 40-pin | `/dev/spidev0.0` | Full compatibility |
-| **Pi 5** | **`gpiochip4`** | 40-pin | `/dev/spidev0.0` | **Requires gpioChip option** |
+| Model            | GPIO Chip       | Pin Layout        | SPI Interface    | Initialization Notes             |
+|------------------|-----------------|-------------------|------------------|----------------------------------|
+| Pi 1 Model A/B   | `gpiochip0`     | 26-pin (original) | `/dev/spidev0.0` | Limited pins, use adapted wiring |
+| Pi 1 Model A+/B+ | `gpiochip0`     | 40-pin            | `/dev/spidev0.0` | Full compatibility               |
+| Pi 2 Model B     | `gpiochip0`     | 40-pin            | `/dev/spidev0.0` | Full compatibility               |
+| Pi 3 Model A+/B+ | `gpiochip0`     | 40-pin            | `/dev/spidev0.0` | Full compatibility               |
+| Pi 4 Model B     | `gpiochip0`     | 40-pin            | `/dev/spidev0.0` | Full compatibility               |
+| **Pi 5**         | **`gpiochip4`** | 40-pin            | `/dev/spidev0.0` | **Requires gpioChip option**     |
 
 #### Raspberry Pi 5 Configuration
 **Critical**: Pi 5 uses `gpiochip4` instead of `gpiochip0`. You **must** specify this in your configuration or initialization will fail:
 
 ```javascript
-const epd = createEPD('13in3k', 'mono', {
+const epd = createDisplay('13in3k', 'mono', {
     rstPin: 17,
     dcPin: 25,
     busyPin: 24,
@@ -296,12 +294,12 @@ Original Pi 1 Model A/B have only 26 GPIO pins. Use this pin mapping:
 ### GPIO Pin Connections
 The following GPIO pins are required for proper operation:
 
-| Function | Default Pin | Description |
-|----------|-------------|-------------|
-| RST      | GPIO 17     | Reset signal (output) |
-| DC       | GPIO 25     | Data/Command signal (output) |
-| CS       | GPIO 22     | SPI Chip Select (output) |
-| BUSY     | GPIO 24     | Busy status signal (input) |
+| Function | Default Pin | Description                                                   |
+|----------|-------------|---------------------------------------------------------------|
+| RST      | GPIO 17     | Reset signal (output)                                         |
+| DC       | GPIO 25     | Data/Command signal (output)                                  |
+| CS       | GPIO 22     | SPI Chip Select (output)                                      |
+| BUSY     | GPIO 24     | Busy status signal (input)                                    |
 | **PWR**  | **GPIO 18** | **Power control (output) - Critical for cold boot operation** |
 
 **Important**: The power pin (PWR) is **essential for reliable operation**, especially when cold-booting the Raspberry Pi. Many Waveshare e-paper displays require explicit power control to function properly. Without this pin, the display may:
@@ -335,7 +333,7 @@ sudo reboot
 **Solution**: Always specify the power pin in your configuration:
 
 ```javascript
-const epd = createEPD('13in3k', 'mono', {
+const epd = createDisplay('13in3k', 'mono', {
     rstPin: 17,
     dcPin: 25,
     busyPin: 24,
@@ -379,34 +377,20 @@ node your-epd-program.js
 
 Then check for this variable in your code:
 ```javascript
-const epd = createEPD('13in3k', 'mono', {
+const epd = createDisplay('13in3k', 'mono', {
     gpioChip: process.env.GPIO_CHIP || 'gpiochip0'
 });
 ```
 
 ## Examples
 
-### Basic Examples
-See `example.js` for basic usage examples including:
-- Basic monochrome display usage
-- 4-grayscale mode with different gray levels
-- PNG image loading and display
+See the [examples/](examples/) directory for working examples of each feature. Each example demonstrates a specific capability and can be copied directly into your projects.
 
-### Canvas Example
-See `canvas-example.js` for HTML5 Canvas rendering:
-- TrueType font rendering with custom fonts
-- Dynamic text and graphics generation
-- Date/time display with styling
-- Full Canvas API usage
-
-Run with: `sudo node canvas-example.js /path/to/font.ttf [x] [y]`
-
-### Enhanced Examples
-See `examples-enhanced.js` for advanced color examples:
+### Usage Examples
 
 #### 7-Color Display Example
 ```javascript
-const epd = createEPD('7in3f', '7color');
+const epd = createDisplay('7in3f', '7color');
 await epd.init();
 
 // Show all 7 colors in blocks
@@ -423,9 +407,9 @@ await epd.display();
 #### 3-Color Display Example
 ```javascript
 // Black/White/Red display
-const epd = createEPD('13in3b', 'red');
+const epd = createDisplay('13in3b', 'red');
 // Or Black/White/Yellow display
-const epd = createEPD('13in3b', 'yellow');
+const epd = createDisplay('13in3b', 'yellow');
 
 await epd.init();
 
@@ -497,7 +481,7 @@ await epd.drawPNG('mixed-color-image.png', 0, 0);
 
 ## Migration from Original Code
 
-The original `EPD13in3k` class is still available for backward compatibility:
+The original display classes are still available for backward compatibility:
 
 ```javascript
 const { EPD13in3k } = require('waveshare-epaper');
@@ -507,8 +491,8 @@ const epd = new EPD13in3k();
 However, using the new factory function is recommended:
 
 ```javascript
-const { createEPD } = require('waveshare-epaper');
-const epd = createEPD('13in3k', 'mono');
+const { createDisplay } = require('waveshare-epaper');
+const epd = createDisplay('13in3k', 'mono');
 ```
 
 ## Publishing
