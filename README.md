@@ -45,14 +45,15 @@ sudo usermod -a -G gpio $USER
 groups
 ```
 
-After logging back in, you can run GPIO programs without `sudo`. If you still encounter permission issues, `sudo` can be used as a fallback, though it's less secure.
+After logging back in, you can run GPIO programs without `sudo`.
 
 ## Quick Start
 
+### 13.3" 4-grayscale Example
 ```javascript
 const { createDisplay } = require('waveshare-epaper');
 
-async function example() {
+(async () => {
     // Create display instance (13.3" 4-grayscale)
     const epd = createDisplay('13in3k', '4gray', {
         rstPin: 17,
@@ -74,10 +75,14 @@ async function example() {
     // Update display
     await epd.display();
     await epd.sleep();
-}
+})();
+```
 
-// 16-grayscale example (IT8951 controller)
-async function grayscaleExample() {
+### 16-grayscale Example (IT8951 Controller)
+```javascript
+const { createDisplay } = require('waveshare-epaper');
+
+(async () => {
     const epd = createDisplay('13in3gray', '16gray', {
         rstPin: 17,
         dcPin: 25,
@@ -100,10 +105,16 @@ async function grayscaleExample() {
     // Display with high quality GC16 mode
     await epd.display('GC16');
     await epd.sleep();
-}
+})();
+```
 
-// Canvas example (requires: npm install canvas)
-async function canvasExample() {
+### Canvas Example
+Requires: `npm install canvas`
+
+```javascript
+const { createDisplay } = require('waveshare-epaper');
+
+(async () => {
     const { createCanvas } = require('canvas');
     const epd = createDisplay('13in3k', '4gray', {
         rstPin: 17, dcPin: 25, busyPin: 24, pwrPin: 18
@@ -124,6 +135,7 @@ async function canvasExample() {
     ctx.font = '36px Arial';
     ctx.fillText('Canvas Demo', 50, 100);
 
+    // Draw a rectangle around the text
     ctx.strokeStyle = 'gray';
     ctx.lineWidth = 2;
     ctx.strokeRect(10, 10, 380, 180);
@@ -132,10 +144,7 @@ async function canvasExample() {
     await epd.drawCanvas(canvas, 100, 100);
     await epd.display();
     await epd.sleep();
-}
-
-example().catch(console.error);
-// grayscaleExample().catch(console.error);
+})();
 ```
 
 ## API Reference
