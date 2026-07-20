@@ -62,13 +62,7 @@ class EPD2in7b extends EPDBase {
 
         // Write black/white data
         await this.sendCommand(0x24);
-        const chunkSize = 1024;
-
-        // Send black/white image data
-        for (let i = 0; i < this.imageBuffer.length; i += chunkSize) {
-            const chunk = this.imageBuffer.slice(i, Math.min(i + chunkSize, this.imageBuffer.length));
-            await this.sendData(Array.from(chunk));
-        }
+        await this.sendBuffer(this.imageBuffer);
 
         // Set cursor position for color data
         await this.sendCommand(0x4E);
@@ -79,20 +73,8 @@ class EPD2in7b extends EPDBase {
         // Write red data
         await this.sendCommand(0x26);
 
-        // Send color buffer data
-        if (this.colorBuffer) {
-            for (let i = 0; i < this.colorBuffer.length; i += chunkSize) {
-                const chunk = this.colorBuffer.slice(i, Math.min(i + chunkSize, this.colorBuffer.length));
-                await this.sendData(Array.from(chunk));
-            }
-        } else {
-            // Send empty color data if no color buffer
-            const emptyChunk = Buffer.alloc(Math.min(chunkSize, this.imageBuffer.length), 0x00);
-            for (let i = 0; i < this.imageBuffer.length; i += chunkSize) {
-                const currentChunkSize = Math.min(chunkSize, this.imageBuffer.length - i);
-                await this.sendData(Array.from(emptyChunk.slice(0, currentChunkSize)));
-            }
-        }
+        // Send color buffer data (or empty data if no color buffer)
+        await this.sendBuffer(this.colorBuffer || Buffer.alloc(this.imageBuffer.length, 0x00));
 
         // Display update
         await this.sendCommand(0x22);

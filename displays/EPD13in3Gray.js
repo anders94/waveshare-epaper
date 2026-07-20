@@ -147,16 +147,11 @@ class EPD13in3Gray extends EPDBase {
         loadImgInfo.writeUInt16LE(width, 18);                 // Width
 
         // Send the load image info
-        await this.sendData(Array.from(loadImgInfo));
+        await this.sendData(loadImgInfo);
 
-        // Send image data in chunks
-        const chunkSize = 4096;
+        // Send image data
         const imageData = this.convertTo4bpp(x, y, width, height);
-
-        for (let i = 0; i < imageData.length; i += chunkSize) {
-            const chunk = imageData.slice(i, Math.min(i + chunkSize, imageData.length));
-            await this.sendData(Array.from(chunk));
-        }
+        await this.sendBuffer(imageData);
 
         await this.sendCommand(this.commands.LD_IMG_END);
     }

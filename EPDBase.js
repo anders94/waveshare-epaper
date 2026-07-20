@@ -1,6 +1,6 @@
-const spi = require('spi-device');
 const fs = require('fs');
 const { PNG } = require('pngjs');
+const { CliGpio, SpiDeviceBackend, validatePin } = require('./hal');
 
 class EPDBase {
     constructor(options = {}) {
@@ -9,21 +9,25 @@ class EPDBase {
         this.deviceNumber = options.deviceNumber || 0;
         this.spiOptions = {
             maxSpeedHz: options.maxSpeedHz || 4000000,
-            mode: spi.MODE0,
+            mode: 0, // SPI mode 0
             bitsPerWord: 8
         };
 
         // GPIO pins (using gpiod for RPi5)
         this.pins = {
-            RST: options.rstPin || 17,
-            DC: options.dcPin || 25,
-            CS: options.csPin || 22,
-            BUSY: options.busyPin || 24,
-            PWR: options.pwrPin || 18
+            RST: validatePin('rstPin', options.rstPin ?? 17),
+            DC: validatePin('dcPin', options.dcPin ?? 25),
+            CS: validatePin('csPin', options.csPin ?? 22),
+            BUSY: validatePin('busyPin', options.busyPin ?? 24),
+            PWR: validatePin('pwrPin', options.pwrPin ?? 18)
         };
         this.gpioChip = options.gpioChip || 'gpiochip0';
 
-        this.spiDevice = null;
+        // Hardware backends - injectable for testing or alternate platforms
+        // (see hal.js for the gpio/spi interfaces)
+        this.gpio = options.gpio || new CliGpio(this.gpioChip);
+        this.spi = options.spi || new SpiDeviceBackend(this.busNumber, this.deviceNumber, this.spiOptions);
+
         this.initialized = false;
 
         // These will be set by subclasses
@@ -61,7 +65,7 @@ class EPDBase {
     async init() {
         try {
             // Initialize SPI device
-            this.spiDevice = spi.openSync(this.busNumber, this.deviceNumber, this.spiOptions);
+            await this.spi.open();
 
             // Initialize GPIO pins
             await this.initGPIO();
@@ -97,61 +101,41 @@ class EPDBase {
     }
 
     async writeGPIO(pin, value) {
-        const { exec } = require('child_process');
-        return new Promise((resolve, reject) => {
-            exec(`gpioset ${this.gpioChip} ${pin}=${value}`, (error, stdout, stderr) => {
-                if (error) {
-                    reject(new Error(`Failed to set GPIO ${pin}: ${error.message}`));
-                } else {
-                    resolve();
-                }
-            });
-        });
+        return this.gpio.write(pin, value);
     }
 
     async readGPIO(pin) {
-        const { exec } = require('child_process');
-        return new Promise((resolve, reject) => {
-            exec(`gpioget ${this.gpioChip} ${pin}`, (error, stdout, stderr) => {
-                if (error) {
-                    reject(new Error(`Failed to read GPIO ${pin}: ${error.message}`));
-                } else {
-                    resolve(parseInt(stdout.trim()));
-                }
-            });
-        });
+        return this.gpio.read(pin);
     }
 
     async sendCommand(command) {
         await this.writeGPIO(this.pins.DC, 0);
-
-        return new Promise((resolve, reject) => {
-            this.spiDevice.transfer([{
-                sendBuffer: Buffer.from([command]),
-                receiveBuffer: Buffer.alloc(1),
-                byteLength: 1
-            }], (error) => {
-                if (error) reject(error);
-                else resolve();
-            });
-        });
+        await this.spi.transfer(Buffer.from([command]));
     }
 
     async sendData(data) {
         await this.writeGPIO(this.pins.DC, 1);
 
-        const buffer = Array.isArray(data) ? Buffer.from(data) : Buffer.from([data]);
+        let buffer;
+        if (Buffer.isBuffer(data)) {
+            buffer = data;
+        } else if (Array.isArray(data)) {
+            buffer = Buffer.from(data);
+        } else {
+            buffer = Buffer.from([data]);
+        }
 
-        return new Promise((resolve, reject) => {
-            this.spiDevice.transfer([{
-                sendBuffer: buffer,
-                receiveBuffer: Buffer.alloc(buffer.length),
-                byteLength: buffer.length
-            }], (error) => {
-                if (error) reject(error);
-                else resolve();
-            });
-        });
+        await this.spi.transfer(buffer);
+    }
+
+    // Send a large buffer as display data, chunked to stay under the SPI
+    // driver's per-transfer limit (spidev bufsiz defaults to 4096 bytes)
+    async sendBuffer(buffer, chunkSize = 4096) {
+        await this.writeGPIO(this.pins.DC, 1);
+
+        for (let i = 0; i < buffer.length; i += chunkSize) {
+            await this.spi.transfer(buffer.subarray(i, Math.min(i + chunkSize, buffer.length)));
+        }
     }
 
     async waitUntilIdle() {
@@ -558,17 +542,24 @@ class EPDBase {
     }
 
     async cleanup() {
-        if (this.spiDevice) {
-            try {
-                this.spiDevice.closeSync();
-            } catch (error) {
-                // Ignore errors during cleanup
-            }
+        try {
+            this.spi.close();
+        } catch (error) {
+            // Ignore errors during cleanup
         }
 
         // Power down the display
         try {
             await this.powerOff();
+        } catch (error) {
+            // Ignore errors during cleanup
+        }
+
+        // Release GPIO lines if the backend holds any
+        try {
+            if (typeof this.gpio.release === 'function') {
+                await this.gpio.release();
+            }
         } catch (error) {
             // Ignore errors during cleanup
         }

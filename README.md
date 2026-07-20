@@ -34,6 +34,10 @@ Not all devices have been tested in the field. Please create a GitHub issue if y
 npm install waveshare-epaper
 ```
 
+The `canvas` module is an optional extra — install it separately
+(`npm install canvas`) if you want to render with `drawCanvas()`; everything
+else (including PNG loading) works without it.
+
 ### GPIO Permissions (Recommended)
 For security, add your user to the `gpio` group instead of running as root:
 
@@ -170,6 +174,34 @@ Creates a display instance for the specified model.
 - `maxSpeedHz` (number): SPI max speed (default: 4000000)
 - `accentColor` (string): For 3-color displays, specify 'red' or 'yellow' accent color
 - `vcom` (number): VCOM voltage for IT8951 displays (default: -2.30)
+- `gpio` (object): Custom GPIO backend (see Hardware Backends below)
+- `spi` (object): Custom SPI backend (see Hardware Backends below)
+
+#### Hardware Backends
+
+GPIO and SPI access go through small injectable backends (see `hal.js`), so
+you can swap in your own implementation — for unit testing without hardware,
+or to use a different GPIO stack (e.g. a native libgpiod binding):
+
+```javascript
+const epd = createDisplay('13in3k', 'mono', {
+    gpio: {
+        write: async (pin, value) => { /* drive a pin */ },
+        read: async (pin) => 0,       // return 0 or 1
+        release: async () => { /* optional: free lines on cleanup() */ }
+    },
+    spi: {
+        open: async () => { /* open the bus */ },
+        transfer: async (buffer) => { /* write buffer to the bus */ },
+        close: () => { /* close the bus */ }
+    }
+});
+```
+
+The default backends shell out to libgpiod's `gpioset`/`gpioget` (with input
+validation, no shell interpolation) and use the `spi-device` module. The
+`spi-device` module is only loaded when the default SPI backend is used, so
+the library also runs on machines without SPI support (e.g. in CI).
 
 #### `getSupportedModels()`
 Returns array of supported models with their specifications.
@@ -228,6 +260,7 @@ Available colors: `BLACK`, `WHITE`, `RED`, `GREEN`, `BLUE`, `YELLOW`, `ORANGE`
 ```
 ├── index.js              # Main entry point and factory functions
 ├── EPDBase.js             # Base class with common functionality
+├── hal.js                 # Hardware abstraction layer (GPIO/SPI backends)
 ├── displays/
 │   ├── index.js           # Display module exports
 │   ├── EPD2in13.js        # 2.13" monochrome display driver

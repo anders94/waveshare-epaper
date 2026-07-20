@@ -87,9 +87,7 @@ class EPD13in3k extends EPDBase {
         ];
 
         await this.sendCommand(0x32);
-        for (let i = 0; i < LUT_DATA_4Gray.length; i++) {
-            await this.sendData(LUT_DATA_4Gray[i]);
-        }
+        await this.sendData(LUT_DATA_4Gray);
     }
 
     async displayImage() {
@@ -101,13 +99,7 @@ class EPD13in3k extends EPDBase {
         } else {
             // Monochrome mode
             await this.sendCommand(0x24);
-
-            // Send image data in chunks
-            const chunkSize = 4096;
-            for (let i = 0; i < this.imageBuffer.length; i += chunkSize) {
-                const chunk = this.imageBuffer.slice(i, Math.min(i + chunkSize, this.imageBuffer.length));
-                await this.sendData(Array.from(chunk));
-            }
+            await this.sendBuffer(this.imageBuffer);
 
             // Display update
             await this.sendCommand(0x22);
@@ -201,18 +193,11 @@ class EPD13in3k extends EPDBase {
 
         // Send first buffer (0x24 command)
         await this.sendCommand(0x24);
-        const chunkSize = 4096;
-        for (let i = 0; i < buffer1.length; i += chunkSize) {
-            const chunk = buffer1.slice(i, Math.min(i + chunkSize, buffer1.length));
-            await this.sendData(Array.from(chunk));
-        }
+        await this.sendBuffer(buffer1);
 
         // Send second buffer (0x26 command)
         await this.sendCommand(0x26);
-        for (let i = 0; i < buffer2.length; i += chunkSize) {
-            const chunk = buffer2.slice(i, Math.min(i + chunkSize, buffer2.length));
-            await this.sendData(Array.from(chunk));
-        }
+        await this.sendBuffer(buffer2);
 
         // Display update for 4-gray
         await this.sendCommand(0x22);

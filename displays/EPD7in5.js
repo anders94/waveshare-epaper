@@ -40,14 +40,7 @@ class EPD7in5 extends EPDBase {
 
         // Initialize with white
         const totalBytes = this.width * this.height / 8;
-        const chunkSize = 4096;
-        const whiteBuffer = Buffer.alloc(Math.min(chunkSize, totalBytes), 0xFF);
-
-        for (let i = 0; i < totalBytes; i += chunkSize) {
-            const currentChunkSize = Math.min(chunkSize, totalBytes - i);
-            const chunk = whiteBuffer.slice(0, currentChunkSize);
-            await this.sendData(Array.from(chunk));
-        }
+        await this.sendBuffer(Buffer.alloc(totalBytes, 0xFF));
 
         // Set resolution
         await this.sendCommand(0x61);
@@ -70,13 +63,7 @@ class EPD7in5 extends EPDBase {
     async displayImage() {
         // Data start transmission
         await this.sendCommand(0x13);
-
-        // Send image data in chunks
-        const chunkSize = 4096;
-        for (let i = 0; i < this.imageBuffer.length; i += chunkSize) {
-            const chunk = this.imageBuffer.slice(i, Math.min(i + chunkSize, this.imageBuffer.length));
-            await this.sendData(Array.from(chunk));
-        }
+        await this.sendBuffer(this.imageBuffer);
 
         // Display refresh
         await this.sendCommand(0x12);
