@@ -118,6 +118,30 @@ test('sendBuffer chunks large buffers and preserves content', async () => {
     assert.deepStrictEqual(Buffer.concat(chunks), big);
 });
 
+// --- BUSY polarity --------------------------------------------------------
+
+// Feed waitUntilIdle a scripted sequence of BUSY pin reads and count how
+// many polls it takes before returning.
+async function countBusyPolls(model, sequence) {
+    const { gpio, spi } = createMockHal();
+    let polls = 0;
+    gpio.read = async () => sequence[Math.min(polls++, sequence.length - 1)];
+    const epd = createDisplay(model, 'mono', { gpio, spi });
+    await epd.waitUntilIdle();
+    return polls;
+}
+
+test('waitUntilIdle: SSD-family (13in3k) waits while BUSY reads 1', async () => {
+    assert.strictEqual(await countBusyPolls('13in3k', [1, 1, 0]), 3);
+    assert.strictEqual(await countBusyPolls('13in3k', [0]), 1);
+});
+
+test('waitUntilIdle: UC8176-class (7in5, 7in3f) waits while BUSY reads 0', async () => {
+    assert.strictEqual(await countBusyPolls('7in5', [0, 0, 1]), 3);
+    assert.strictEqual(await countBusyPolls('7in5', [1]), 1);
+    assert.strictEqual(await countBusyPolls('7in3f', [0, 1]), 2);
+});
+
 // --- Full display cycle ---------------------------------------------------
 
 test('13in3k mono: init + display sends the full framebuffer', async () => {

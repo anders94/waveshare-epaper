@@ -9,6 +9,10 @@ class EPD7in3f extends EPDBase {
         this.colorMode = '7color';
         this.bitsPerPixel = 4; // 4 bits per pixel to store 3-bit color values (with padding)
 
+        // BUSY is low while busy, high when idle
+        // (per EPD_7IN3F_ReadBusyH in the Waveshare C reference)
+        this.busyActiveLevel = 0;
+
         // Override base colors to match hardware
         this.colors = {
             BLACK: 0x0,   // 000
