@@ -69,13 +69,7 @@ class EPD2in13 extends EPDBase {
 
         // Write RAM
         await this.sendCommand(0x24);
-
-        // Send image data
-        const chunkSize = 1024;
-        for (let i = 0; i < this.imageBuffer.length; i += chunkSize) {
-            const chunk = this.imageBuffer.slice(i, Math.min(i + chunkSize, this.imageBuffer.length));
-            await this.sendData(Array.from(chunk));
-        }
+        await this.sendBuffer(this.imageBuffer);
 
         // Display update sequence
         await this.sendCommand(0x22);

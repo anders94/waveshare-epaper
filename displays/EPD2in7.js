@@ -106,29 +106,19 @@ class EPD2in7 extends EPDBase {
         ];
 
         await this.sendCommand(0x20);
-        for (let i = 0; i < 44; i++) {
-            await this.sendData(lut_vcom_dc[i]);
-        }
+        await this.sendData(lut_vcom_dc);
 
         await this.sendCommand(0x21);
-        for (let i = 0; i < 42; i++) {
-            await this.sendData(lut_ww[i]);
-        }
+        await this.sendData(lut_ww);
 
         await this.sendCommand(0x22);
-        for (let i = 0; i < 42; i++) {
-            await this.sendData(lut_bw[i]);
-        }
+        await this.sendData(lut_bw);
 
         await this.sendCommand(0x23);
-        for (let i = 0; i < 42; i++) {
-            await this.sendData(lut_wb[i]);
-        }
+        await this.sendData(lut_wb);
 
         await this.sendCommand(0x24);
-        for (let i = 0; i < 42; i++) {
-            await this.sendData(lut_bb[i]);
-        }
+        await this.sendData(lut_bb);
     }
 
     async setLut4Gray() {
@@ -183,29 +173,19 @@ class EPD2in7 extends EPDBase {
         ];
 
         await this.sendCommand(0x20);
-        for (let i = 0; i < 42; i++) {
-            await this.sendData(lut_vcom_dc_4gray[i]);
-        }
+        await this.sendData(lut_vcom_dc_4gray);
 
         await this.sendCommand(0x21);
-        for (let i = 0; i < 42; i++) {
-            await this.sendData(lut_ww_4gray[i]);
-        }
+        await this.sendData(lut_ww_4gray);
 
         await this.sendCommand(0x22);
-        for (let i = 0; i < 42; i++) {
-            await this.sendData(lut_bw_4gray[i]);
-        }
+        await this.sendData(lut_bw_4gray);
 
         await this.sendCommand(0x23);
-        for (let i = 0; i < 42; i++) {
-            await this.sendData(lut_wb_4gray[i]);
-        }
+        await this.sendData(lut_wb_4gray);
 
         await this.sendCommand(0x24);
-        for (let i = 0; i < 42; i++) {
-            await this.sendData(lut_bb_4gray[i]);
-        }
+        await this.sendData(lut_bb_4gray);
     }
 
     async displayImage() {
@@ -217,13 +197,7 @@ class EPD2in7 extends EPDBase {
 
         // Write RAM
         await this.sendCommand(0x24);
-
-        // Send image data
-        const chunkSize = 2048;
-        for (let i = 0; i < this.imageBuffer.length; i += chunkSize) {
-            const chunk = this.imageBuffer.slice(i, Math.min(i + chunkSize, this.imageBuffer.length));
-            await this.sendData(Array.from(chunk));
-        }
+        await this.sendBuffer(this.imageBuffer);
 
         // Display update
         await this.sendCommand(0x22);

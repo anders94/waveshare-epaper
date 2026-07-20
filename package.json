@@ -1,13 +1,11 @@
 {
-  "version": "0.2.4",
+  "version": "0.3.0",
   "name": "waveshare-epaper",
   "description": "A modular Node.js driver for Waveshare E-Paper displays that supports multiple display models with different resolutions and color modes",
   "main": "index.js",
   "scripts": {
-    "test": "node example.js",
-    "example": "node example.js",
-    "example-enhanced": "node examples-enhanced.js",
-    "prepublishOnly": "echo 'Ready to publish'"
+    "test": "node test/run-tests.js",
+    "prepublishOnly": "npm test"
   },
   "repository": {
     "type": "git",
@@ -18,9 +16,11 @@
   },
   "homepage": "https://github.com/anders94/waveshare-epaper#readme",
   "dependencies": {
-    "canvas": "^3.2.0",
     "pngjs": "^7.0.0",
     "spi-device": "^3.1.2"
+  },
+  "devDependencies": {
+    "canvas": "^3.2.0"
   },
   "keywords": [
     "waveshare",
@@ -44,9 +44,9 @@
   "files": [
     "index.js",
     "EPDBase.js",
+    "hal.js",
     "displays/",
-    "example.js",
-    "examples-enhanced.js",
+    "examples/",
     "README.md",
     "LICENSE"
   ]
