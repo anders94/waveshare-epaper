@@ -10,6 +10,9 @@ class EPD13in3Gray extends EPDBase {
         this.colorMode = '16gray';
         this.bitsPerPixel = 4; // 4 bits per pixel for 16 grayscale levels
 
+        // IT8951 HRDY line: low while busy, high when ready
+        this.busyActiveLevel = 0;
+
         // IT8951 controller specific settings
         this.targetMemoryAddr = 0x001236E0; // Default target memory address
         this.vcom = options.vcom || -2.30; // Default VCOM voltage

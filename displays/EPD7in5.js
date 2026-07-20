@@ -9,6 +9,10 @@ class EPD7in5 extends EPDBase {
         this.colorMode = 'mono'; // 7.5" is monochrome only
         this.bitsPerPixel = 1;
 
+        // UC8176-class controller: BUSY is low while busy, high when idle
+        // (per EPD_7IN5_ReadBusy in the Waveshare C reference)
+        this.busyActiveLevel = 0;
+
         this.initializeBuffer();
     }
 

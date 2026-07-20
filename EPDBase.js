@@ -23,6 +23,11 @@ class EPDBase {
         };
         this.gpioChip = options.gpioChip || 'gpiochip0';
 
+        // GPIO level of the BUSY pin while the panel is busy. SSD-family
+        // controllers hold BUSY high while busy (the default); UC8176-class
+        // and IT8951 controllers hold it low (those drivers override with 0).
+        this.busyActiveLevel = 1;
+
         // Hardware backends - injectable for testing or alternate platforms
         // (see hal.js for the gpio/spi interfaces)
         this.gpio = options.gpio || new CliGpio(this.gpioChip);
@@ -142,7 +147,7 @@ class EPDBase {
         let timeout = 0;
         const maxTimeout = 100; // 10 seconds max wait
 
-        while (await this.readGPIO(this.pins.BUSY) === 1) {
+        while (await this.readGPIO(this.pins.BUSY) === this.busyActiveLevel) {
             await this.delay(100);
             timeout++;
 
