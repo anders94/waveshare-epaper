@@ -27,6 +27,64 @@ function validateGpioChip(chip) {
     return chip;
 }
 
+// GPIO backend over the node-libgpiod native binding. Requests each line
+// once and holds it, so a pin toggle is a native call instead of a process
+// spawn - orders of magnitude faster than CliGpio. Used automatically when
+// node-libgpiod is installed (npm install node-libgpiod).
+class LibgpiodGpio {
+    constructor(chip = 'gpiochip0', binding = null) {
+        this.chipName = validateGpioChip(chip);
+        this.binding = binding || require('node-libgpiod');
+        this.chip = new this.binding.Chip(this.chipName);
+        this.lines = new Map(); // pin -> { line, direction }
+    }
+
+    requestLine(pin, direction) {
+        const p = validatePin('pin', pin);
+        let entry = this.lines.get(p);
+
+        // Re-request if the pin changes direction (shouldn't happen in
+        // practice - BUSY is the only input and is never written)
+        if (entry && entry.direction !== direction) {
+            entry.line.release();
+            this.lines.delete(p);
+            entry = null;
+        }
+
+        if (!entry) {
+            const line = this.chip.getLine(p);
+            if (direction === 'out') {
+                line.requestOutputMode('waveshare-epaper');
+            } else {
+                line.requestInputMode('waveshare-epaper');
+            }
+            entry = { line, direction };
+            this.lines.set(p, entry);
+        }
+
+        return entry.line;
+    }
+
+    async write(pin, value) {
+        this.requestLine(pin, 'out').setValue(value ? 1 : 0);
+    }
+
+    async read(pin) {
+        return this.requestLine(pin, 'in').getValue();
+    }
+
+    async release() {
+        for (const { line } of this.lines.values()) {
+            try {
+                line.release();
+            } catch (error) {
+                // Ignore errors during release
+            }
+        }
+        this.lines.clear();
+    }
+}
+
 // GPIO backend that drives libgpiod's gpioset/gpioget CLI tools. Inputs are
 // validated and passed as discrete execFile arguments so nothing ever goes
 // through a shell.
@@ -101,9 +159,21 @@ class SpiDeviceBackend {
     }
 }
 
+// Pick the best available GPIO backend: the node-libgpiod native binding if
+// it is installed and the chip can be opened, otherwise the CLI tools.
+function createDefaultGpio(chip) {
+    try {
+        return new LibgpiodGpio(chip);
+    } catch (error) {
+        return new CliGpio(chip);
+    }
+}
+
 module.exports = {
     CliGpio,
+    LibgpiodGpio,
     SpiDeviceBackend,
+    createDefaultGpio,
     validatePin,
     validateGpioChip
 };
