@@ -293,10 +293,11 @@ Available colors: `BLACK`, `WHITE`, `RED`, `GREEN`, `BLUE`, `YELLOW`, `ORANGE`
 ### File Structure
 ```
 ├── index.js              # Main entry point and factory functions
-├── EPDBase.js             # Base class with common functionality
+├── EPDBase.js             # Base class: SPI/GPIO protocol, drawing, image import
 ├── hal.js                 # Hardware abstraction layer (GPIO/SPI backends)
+├── formats.js             # Pixel format strategies (one class per color mode)
 ├── displays/
-│   ├── index.js           # Display module exports
+│   ├── index.js           # Driver registry built from each driver's meta
 │   ├── EPD2in13.js        # 2.13" monochrome display driver
 │   ├── EPD2in7.js         # 2.7" mono/4-grayscale display driver
 │   ├── EPD2in7b.js        # 2.7" 3-color display driver
@@ -338,8 +339,20 @@ To add support for a new display model:
    }
    ```
 
-3. Add to `displays/index.js` exports
-4. Add case to `createDisplay()` function
+3. Export `meta` and `create` from the module so the registry picks it up —
+   the factory lookup and `getSupportedModels()` are both derived from this:
+   ```javascript
+   module.exports = {
+       EPDNewModel,
+       meta: { model: 'newmodel', aliases: ['n.m'], size: '200x200', colorModes: ['mono'], description: 'New 200x200 panel' },
+       create: (colorMode, options) => new EPDNewModel(options)
+   };
+   ```
+4. Add the module to the `modules` list in `displays/index.js`
+
+Pixel packing, clear values and RGB quantization come from the color mode's
+format class in `formats.js` — a new panel with an existing color mode needs
+no pixel code at all. A new color mode means adding one format class there.
 
 ## Hardware Requirements
 

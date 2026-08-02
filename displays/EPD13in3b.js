@@ -148,5 +148,8 @@ module.exports = {
     EPD13in3b,
     create3Color: (accentColor = 'red', options) => EPD13in3b.create(accentColor, options),
     createRed: (options) => EPD13in3b.create('red', options),
-    createYellow: (options) => EPD13in3b.create('yellow', options)
+    createYellow: (options) => EPD13in3b.create('yellow', options),
+    meta: { model: '13in3b', aliases: ['13.3b'], size: '960x680', colorModes: ['3color'], description: '13.3" black/white/red' },
+    // The colorMode argument doubles as the accent color for 3-color panels
+    create: (colorMode, options) => EPD13in3b.create(colorMode || 'red', options)
 };

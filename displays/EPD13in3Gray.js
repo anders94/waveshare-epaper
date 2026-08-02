@@ -336,5 +336,14 @@ class EPD13in3Gray extends EPDBase {
 
 module.exports = {
     EPD13in3Gray,
-    create16Gray: (options) => EPD13in3Gray.create16Gray(options)
+    create16Gray: (options) => EPD13in3Gray.create16Gray(options),
+    meta: {
+        model: '13in3gray',
+        aliases: ['13.3gray', '13in3_16gray', '13.3_16gray'],
+        size: '1600x1200',
+        colorModes: ['16gray'],
+        description: '13.3" 16-level grayscale (IT8951) - EXPERIMENTAL, driver not yet functional',
+        experimental: true
+    },
+    create: (colorMode, options) => EPD13in3Gray.create16Gray(options)
 };

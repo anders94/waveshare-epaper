@@ -127,5 +127,8 @@ class EPD2in7b extends EPDBase {
 
 module.exports = {
     EPD2in7b,
-    create3Color: (accentColor = 'red', options) => EPD2in7b.create(accentColor, options)
+    create3Color: (accentColor = 'red', options) => EPD2in7b.create(accentColor, options),
+    meta: { model: '2in7b', aliases: ['2.7b'], size: '176x264', colorModes: ['3color'], description: '2.7" black/white/red' },
+    // The colorMode argument doubles as the accent color for 3-color panels
+    create: (colorMode, options) => EPD2in7b.create(colorMode || 'red', options)
 };

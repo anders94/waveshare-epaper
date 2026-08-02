@@ -81,5 +81,7 @@ class EPD2in13 extends EPDBase {
 
 module.exports = {
     EPD2in13,
-    createMono: (options) => new EPD2in13(options)
+    createMono: (options) => new EPD2in13(options),
+    meta: { model: '2in13', aliases: ['2.13'], size: '122x250', colorModes: ['mono'], description: '2.13" monochrome' },
+    create: (colorMode, options) => new EPD2in13(options)
 };

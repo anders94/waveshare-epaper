@@ -86,5 +86,7 @@ class EPD7in5 extends EPDBase {
 
 module.exports = {
     EPD7in5,
-    createMono: (options) => new EPD7in5(options)
+    createMono: (options) => new EPD7in5(options),
+    meta: { model: '7in5', aliases: ['7.5'], size: '640x384', colorModes: ['mono'], description: '7.5" monochrome' },
+    create: (colorMode, options) => new EPD7in5(options)
 };

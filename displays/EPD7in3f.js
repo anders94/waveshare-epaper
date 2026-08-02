@@ -113,28 +113,6 @@ class EPD7in3f extends EPDBase {
         await this.display();
     }
 
-    // Override setPixel for optimized 7-color handling
-    setPixel(x, y, color) {
-        if (x >= this.width || y >= this.height || x < 0 || y < 0) {
-            return;
-        }
-
-        const pixelIndex = x + y * this.width;
-        const byteIndex = Math.floor(pixelIndex / 2);
-        const pixelPos = pixelIndex % 2;
-
-        // Ensure color is in valid range
-        const validColor = Math.max(0, Math.min(7, color));
-
-        if (pixelPos === 0) {
-            // First pixel (upper 4 bits)
-            this.imageBuffer[byteIndex] = (this.imageBuffer[byteIndex] & 0x0F) | ((validColor & 0x0F) << 4);
-        } else {
-            // Second pixel (lower 4 bits)
-            this.imageBuffer[byteIndex] = (this.imageBuffer[byteIndex] & 0xF0) | (validColor & 0x0F);
-        }
-    }
-
     // Convenience methods for color drawing
     drawColorRect(x, y, width, height, colorName, filled = false) {
         const color = this.colors[colorName] !== undefined ? this.colors[colorName] : this.colors.WHITE;
@@ -160,5 +138,7 @@ class EPD7in3f extends EPDBase {
 
 module.exports = {
     EPD7in3f,
-    create7Color: (options) => EPD7in3f.create(options)
+    create7Color: (options) => EPD7in3f.create(options),
+    meta: { model: '7in3f', aliases: ['7.3f'], size: '800x480', colorModes: ['7color'], description: '7.3" full color (7 colors)' },
+    create: (colorMode, options) => EPD7in3f.create(options)
 };

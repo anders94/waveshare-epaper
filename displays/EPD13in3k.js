@@ -216,5 +216,7 @@ class EPD13in3k extends EPDBase {
 module.exports = {
     EPD13in3k,
     createMono: (options) => EPD13in3k.create('mono', options),
-    create4Gray: (options) => EPD13in3k.create('4gray', options)
+    create4Gray: (options) => EPD13in3k.create('4gray', options),
+    meta: { model: '13in3k', aliases: ['13.3k'], size: '960x680', colorModes: ['mono', '4gray'], description: '13.3" mono/4-grayscale' },
+    create: (colorMode, options) => EPD13in3k.create(colorMode === '4gray' ? '4gray' : 'mono', options)
 };
