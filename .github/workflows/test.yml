@@ -1,0 +1,22 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18, 20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      # The test suite injects mock GPIO/SPI backends, so the native
+      # spi-device and canvas modules are not needed to run it.
+      - run: npm install --omit=dev --ignore-scripts
+      - run: npm test
