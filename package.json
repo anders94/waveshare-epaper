@@ -1,5 +1,5 @@
 {
-  "version": "0.3.0",
+  "version": "0.4.0",
   "name": "waveshare-epaper",
   "description": "A modular Node.js driver for Waveshare E-Paper displays that supports multiple display models with different resolutions and color modes",
   "main": "index.js",
@@ -53,6 +53,7 @@
     "index.js",
     "EPDBase.js",
     "hal.js",
+    "formats.js",
     "displays/",
     "examples/",
     "README.md",

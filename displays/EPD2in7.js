@@ -215,5 +215,7 @@ class EPD2in7 extends EPDBase {
 module.exports = {
     EPD2in7,
     createMono: (options) => EPD2in7.create('mono', options),
-    create4Gray: (options) => EPD2in7.create('4gray', options)
+    create4Gray: (options) => EPD2in7.create('4gray', options),
+    meta: { model: '2in7', aliases: ['2.7'], size: '176x264', colorModes: ['mono', '4gray'], description: '2.7" mono/4-grayscale' },
+    create: (colorMode, options) => EPD2in7.create(colorMode === '4gray' ? '4gray' : 'mono', options)
 };

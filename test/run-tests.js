@@ -146,6 +146,92 @@ test('waitUntilIdle: UC8176-class (7in5, 7in3f) waits while BUSY reads 0', async
     assert.strictEqual(await countBusyPolls('7in3f', [0, 1]), 2);
 });
 
+// --- Pixel formats --------------------------------------------------------
+
+test('4gray format packs 2-bit pixels top bits first', () => {
+    const { gpio, spi } = createMockHal();
+    const epd = createDisplay('13in3k', '4gray', { gpio, spi });
+
+    epd.setPixel(0, 0, 0); // black    -> 00
+    epd.setPixel(1, 0, 1); // dark     -> 01
+    epd.setPixel(2, 0, 2); // light    -> 10
+    epd.setPixel(3, 0, 3); // white    -> 11
+    assert.strictEqual(epd.imageBuffer[0], 0b00011011);
+
+    epd.setPixel(0, 0, 99); // out of range -> white
+    assert.strictEqual(epd.imageBuffer[0], 0b11011011);
+});
+
+test('3color format maintains both planes per pixel', () => {
+    const { gpio, spi } = createMockHal();
+    const epd = createDisplay('2in7b', 'red', { gpio, spi });
+
+    epd.setPixel(0, 0, 2); // accent: white in image plane, set in color plane
+    assert.strictEqual(epd.imageBuffer[0] & 0x80, 0x80);
+    assert.strictEqual(epd.colorBuffer[0] & 0x80, 0x80);
+
+    epd.setPixel(0, 0, 0); // black: cleared in both planes
+    assert.strictEqual(epd.imageBuffer[0] & 0x80, 0);
+    assert.strictEqual(epd.colorBuffer[0] & 0x80, 0);
+
+    epd.setPixel(0, 0, 1); // white: set in image plane, cleared in color plane
+    assert.strictEqual(epd.imageBuffer[0] & 0x80, 0x80);
+    assert.strictEqual(epd.colorBuffer[0] & 0x80, 0);
+});
+
+test('7color format packs nibbles and clamps out-of-range colors', () => {
+    const { gpio, spi } = createMockHal();
+    const epd = createDisplay('7in3f', '7color', { gpio, spi });
+
+    epd.setPixel(0, 0, epd.colors.RED);  // upper nibble
+    epd.setPixel(1, 0, 9);               // clamped to 7, lower nibble
+    assert.strictEqual(epd.imageBuffer[0], (4 << 4) | 7);
+});
+
+test('rgbToColor quantizes per color mode', () => {
+    const { gpio, spi } = createMockHal();
+
+    const mono = createDisplay('2in13', 'mono', { gpio, spi });
+    assert.strictEqual(mono.rgbToColor(30, 30, 30), 0);
+    assert.strictEqual(mono.rgbToColor(220, 220, 220), 1);
+
+    const gray = createDisplay('2in7', '4gray', { gpio, spi });
+    assert.strictEqual(gray.rgbToColor(100, 100, 100), 1);
+    assert.strictEqual(gray.rgbToColor(170, 170, 170), 2);
+
+    const tri = createDisplay('2in7b', 'red', { gpio, spi });
+    assert.strictEqual(tri.rgbToColor(255, 0, 0), 2); // red -> accent
+
+    const seven = createDisplay('7in3f', '7color', { gpio, spi });
+    assert.strictEqual(seven.rgbToColor(255, 0, 0), seven.colors.RED);
+    assert.strictEqual(seven.rgbToColor(255, 200, 0), seven.colors.ORANGE);
+});
+
+// --- Driver registry ------------------------------------------------------
+
+test('every model and alias resolves through the registry', () => {
+    const { gpio, spi } = createMockHal();
+    const { getSupportedModels } = require('..');
+
+    for (const meta of getSupportedModels()) {
+        const options = { gpio, spi, experimental: true };
+        for (const name of [meta.model, ...meta.aliases]) {
+            const epd = createDisplay(name, meta.colorModes[0], options);
+            const [w] = meta.size.split('x').map(Number);
+            assert.strictEqual(epd.width, w, `${name} should create a ${meta.size} display`);
+        }
+    }
+
+    assert.strictEqual(getSupportedModels().length, 8);
+});
+
+test('unknown model throws with the supported list', () => {
+    assert.throws(
+        () => createDisplay('9in99', 'mono'),
+        /Unsupported display model: 9in99.*13in3k/
+    );
+});
+
 // --- Experimental driver gating -------------------------------------------
 
 test('13in3gray (IT8951) is gated behind the experimental option', () => {

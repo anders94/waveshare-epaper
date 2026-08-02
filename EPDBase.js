@@ -1,6 +1,7 @@
 const fs = require('fs');
 const { PNG } = require('pngjs');
 const { createDefaultGpio, SpiDeviceBackend, validatePin } = require('./hal');
+const { createFormat } = require('./formats');
 
 class EPDBase {
     constructor(options = {}) {
@@ -68,12 +69,24 @@ class EPDBase {
         };
     }
 
+    // Pixel format strategy for the current color mode (see formats.js).
+    // Created lazily because subclasses set colorMode after super() runs.
+    // Null for modes without a format (the experimental 16gray driver
+    // overrides the pixel operations itself).
+    get format() {
+        if (this._formatMode !== this.colorMode) {
+            this._format = createFormat(this.colorMode, this.colors);
+            this._formatMode = this.colorMode;
+        }
+        return this._format;
+    }
+
     initializeBuffer() {
         const totalBits = this.width * this.height * this.bitsPerPixel;
         this.imageBuffer = Buffer.alloc(Math.ceil(totalBits / 8));
 
         // Initialize color buffer for 3-color displays
-        if (this.colorMode === '3color') {
+        if (this.format && this.format.usesColorBuffer) {
             this.colorBuffer = Buffer.alloc(Math.ceil(this.width * this.height / 8));
         }
     }
@@ -200,17 +213,8 @@ class EPDBase {
     }
 
     async clear() {
-        if (this.colorMode === 'mono') {
-            this.imageBuffer.fill(0xFF);
-        } else if (this.colorMode === '4gray') {
-            // For 4-gray mode, white = 0xC0 -> top 2 bits = 11
-            // 4 white pixels per byte = 11 11 11 11 = 0xFF
-            this.imageBuffer.fill(0xFF);
-        } else if (this.colorMode === '3color') {
-            this.imageBuffer.fill(0xFF); // White background
-            if (this.colorBuffer) this.colorBuffer.fill(0x00); // No color
-        } else if (this.colorMode === '7color') {
-            this.imageBuffer.fill(0x11); // White pixels (all pixels set to WHITE = 1)
+        if (this.format) {
+            this.format.clear({ image: this.imageBuffer, color: this.colorBuffer });
         }
         await this.display();
     }
@@ -247,76 +251,8 @@ class EPDBase {
             return;
         }
 
-        if (this.colorMode === 'mono') {
-            const byteIndex = Math.floor((x + y * this.width) / 8);
-            const bitIndex = 7 - ((x + y * this.width) % 8);
-
-            if (color === 0) {
-                // Black
-                this.imageBuffer[byteIndex] &= ~(1 << bitIndex);
-            } else {
-                // White
-                this.imageBuffer[byteIndex] |= (1 << bitIndex);
-            }
-        } else if (this.colorMode === '4gray') {
-            // For 4-gray mode, store pixels in format expected by C encoding algorithm
-            const pixelIndex = x + y * this.width;
-            const byteIndex = Math.floor(pixelIndex / 4);
-            const pixelPos = pixelIndex % 4;
-            const bitShift = 6 - (pixelPos * 2); // Top 2 bits first: 6,4,2,0
-
-            // Based on your actual test results (mapping appears inverted):
-            let rawValue;
-            switch (color) {
-                case 0: rawValue = 0x00; break; // Black -> 00 (darkest available)
-                case 1: rawValue = 0x01; break; // Dark gray -> 01
-                case 2: rawValue = 0x02; break; // Light gray -> 10
-                case 3: rawValue = 0x03; break; // White -> 11
-                default: rawValue = 0x03; break; // Default to white
-            }
-
-            // Clear the 2 bits for this pixel and set new value
-            const mask = 0x03 << bitShift; // Create mask for 2 bits at correct position
-            this.imageBuffer[byteIndex] &= ~mask; // Clear the bits
-            this.imageBuffer[byteIndex] |= (rawValue << bitShift); // Set the bits
-        } else if (this.colorMode === '3color') {
-            // For 3-color displays, color parameter can be:
-            // 0 = black, 1 = white, 2 = red/yellow (accent color)
-            const byteIndex = Math.floor((x + y * this.width) / 8);
-            const bitIndex = 7 - ((x + y * this.width) % 8);
-
-            if (color === 2) {
-                // Accent color (red/yellow) - set in color buffer, clear in main buffer
-                this.imageBuffer[byteIndex] |= (1 << bitIndex); // White in main buffer
-                if (this.colorBuffer) {
-                    this.colorBuffer[byteIndex] |= (1 << bitIndex); // Set color bit
-                }
-            } else if (color === 0) {
-                // Black - clear in both buffers
-                this.imageBuffer[byteIndex] &= ~(1 << bitIndex);
-                if (this.colorBuffer) {
-                    this.colorBuffer[byteIndex] &= ~(1 << bitIndex);
-                }
-            } else {
-                // White - set in main buffer, clear in color buffer
-                this.imageBuffer[byteIndex] |= (1 << bitIndex);
-                if (this.colorBuffer) {
-                    this.colorBuffer[byteIndex] &= ~(1 << bitIndex);
-                }
-            }
-        } else if (this.colorMode === '7color') {
-            // For 7-color displays, pack 2 pixels per byte (4 bits each, but only 3 bits used)
-            const pixelIndex = x + y * this.width;
-            const byteIndex = Math.floor(pixelIndex / 2);
-            const pixelPos = pixelIndex % 2;
-
-            if (pixelPos === 0) {
-                // First pixel (upper 4 bits)
-                this.imageBuffer[byteIndex] = (this.imageBuffer[byteIndex] & 0x0F) | ((color & 0x07) << 4);
-            } else {
-                // Second pixel (lower 4 bits)
-                this.imageBuffer[byteIndex] = (this.imageBuffer[byteIndex] & 0xF0) | (color & 0x07);
-            }
+        if (this.format) {
+            this.format.setPixel({ image: this.imageBuffer, color: this.colorBuffer }, this.width, x, y, color);
         }
     }
 
@@ -382,57 +318,7 @@ class EPDBase {
 
     // Convert RGB color to display format based on color mode
     rgbToColor(r, g, b) {
-        if (this.colorMode === 'mono') {
-            const gray = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
-            return gray < 128 ? 0 : 1; // Black or white
-        } else if (this.colorMode === '4gray') {
-            const gray = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
-            // Map to 4 levels: 0=black, 1=dark gray, 2=light gray, 3=white
-            if (gray < 64) return 0;
-            else if (gray < 128) return 1;
-            else if (gray < 192) return 2;
-            else return 3;
-        } else if (this.colorMode === '3color') {
-            // Simple color detection for 3-color displays
-            const gray = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
-
-            // Check if it's predominantly red or yellow
-            if (r > g + 50 && r > b + 50 && r > 150) return 2; // Red-ish
-            if (r > 150 && g > 150 && b < 100) return 2; // Yellow-ish
-
-            // Otherwise black or white based on brightness
-            return gray < 128 ? 0 : 1;
-        } else if (this.colorMode === '7color') {
-            // Advanced color detection for 7-color displays
-            const maxComponent = Math.max(r, g, b);
-            const minComponent = Math.min(r, g, b);
-
-            // Very dark colors
-            if (maxComponent < 50) return this.colors.BLACK;
-
-            // Very bright colors
-            if (minComponent > 200) return this.colors.WHITE;
-
-            // Color detection based on dominant component
-            if (r > g + 30 && r > b + 30) {
-                // Red-dominant
-                if (g > 150) return this.colors.ORANGE; // Red + Green = Orange
-                return this.colors.RED;
-            } else if (g > r + 30 && g > b + 30) {
-                // Green-dominant
-                if (r > 150) return this.colors.YELLOW; // Red + Green = Yellow
-                return this.colors.GREEN;
-            } else if (b > r + 30 && b > g + 30) {
-                // Blue-dominant
-                return this.colors.BLUE;
-            }
-
-            // Fallback to grayscale
-            const gray = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
-            return gray < 128 ? this.colors.BLACK : this.colors.WHITE;
-        }
-
-        return 0;
+        return this.format ? this.format.rgbToColor(r, g, b) : 0;
     }
 
     // Keep backward compatibility
@@ -468,17 +354,9 @@ class EPDBase {
                             const a = this.data[idx + 3];
 
                             // Handle transparency - treat transparent as white/background
-                            let pixelValue;
-                            if (a < 128) {
-                                // Transparent pixels become background color
-                                if (self.colorMode === 'mono') pixelValue = 1; // White
-                                else if (self.colorMode === '4gray') pixelValue = 3; // White
-                                else if (self.colorMode === '3color') pixelValue = 1; // White
-                                else if (self.colorMode === '7color') pixelValue = self.colors.WHITE;
-                                else pixelValue = 1;
-                            } else {
-                                pixelValue = self.rgbToColor(r, g, b);
-                            }
+                            const pixelValue = (a < 128)
+                                ? (self.format ? self.format.background : 1)
+                                : self.rgbToColor(r, g, b);
 
                             imageData.pixels[y * this.width + x] = pixelValue;
                         }
@@ -538,17 +416,9 @@ class EPDBase {
                 const a = imageData.data[dataIndex + 3];
 
                 // Handle transparency - treat transparent as white/background
-                let pixelValue;
-                if (a < 128) {
-                    // Transparent pixels become background color
-                    if (this.colorMode === 'mono') pixelValue = 1; // White
-                    else if (this.colorMode === '4gray') pixelValue = 3; // White
-                    else if (this.colorMode === '3color') pixelValue = 1; // White
-                    else if (this.colorMode === '7color') pixelValue = this.colors.WHITE;
-                    else pixelValue = 1;
-                } else {
-                    pixelValue = this.rgbToColor(r, g, b);
-                }
+                const pixelValue = (a < 128)
+                    ? (this.format ? this.format.background : 1)
+                    : this.rgbToColor(r, g, b);
 
                 this.setPixel(screenX, screenY, pixelValue);
             }
