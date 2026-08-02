@@ -1,7 +1,9 @@
 const { createDisplay } = require('waveshare-epaper');
 
 async function main() {
-    const display = createDisplay('13in3gray', '16gray');
+    // NOTE: the IT8951 driver is experimental and does not yet drive the
+    // panel - this example shows the intended API only
+    const display = createDisplay('13in3gray', '16gray', { experimental: true });
 
     try {
         await display.init();

@@ -146,6 +146,24 @@ test('waitUntilIdle: UC8176-class (7in5, 7in3f) waits while BUSY reads 0', async
     assert.strictEqual(await countBusyPolls('7in3f', [0, 1]), 2);
 });
 
+// --- Experimental driver gating -------------------------------------------
+
+test('13in3gray (IT8951) is gated behind the experimental option', () => {
+    const { gpio, spi } = createMockHal();
+
+    assert.throws(
+        () => createDisplay('13in3gray', '16gray', { gpio, spi }),
+        /experimental and not yet functional/
+    );
+
+    const epd = createDisplay('13in3gray', '16gray', { gpio, spi, experimental: true });
+    assert.strictEqual(epd.width, 1600);
+
+    const { getSupportedModels } = require('..');
+    const entry = getSupportedModels().find(m => m.model === '13in3gray');
+    assert.strictEqual(entry.experimental, true);
+});
+
 // --- Native GPIO backend --------------------------------------------------
 
 // Fake node-libgpiod binding matching the Chip/Line API of v0.6
