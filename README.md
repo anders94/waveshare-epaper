@@ -166,12 +166,17 @@ Creates a display instance for the specified model.
 - `rstPin` (number): Reset GPIO pin (default: 17)
 - `dcPin` (number): Data/Command GPIO pin (default: 25)
 - `busyPin` (number): Busy GPIO pin (default: 24)
-- `csPin` (number): Chip Select GPIO pin (default: 22)
 - `pwrPin` (number): Power control GPIO pin (default: 18)
+- `busyTimeoutMs` (number): How long to wait for the BUSY pin before throwing (default: 10000)
+- `maxImagePixels` (number): Reject PNGs larger than this many pixels (default: ~16.7M)
 - `gpioChip` (string): GPIO chip name (default: 'gpiochip0')
 - `busNumber` (number): SPI bus number (default: 0)
 - `deviceNumber` (number): SPI device number (default: 0)
 - `maxSpeedHz` (number): SPI max speed (default: 4000000)
+
+Note: there is no `csPin` option — chip select is driven by the SPI
+controller's CE line (wire the panel's CS to CE0, or CE1 with
+`deviceNumber: 1`), not by a GPIO.
 - `accentColor` (string): For 3-color displays, specify 'red' or 'yellow' accent color
 - `vcom` (number): VCOM voltage for IT8951 displays (default: -2.30)
 - `gpio` (object): Custom GPIO backend (see Hardware Backends below)
@@ -213,7 +218,7 @@ Returns array of supported models with their specifications.
 - `await epd.clear()` - Clear display to background color
 - `await epd.display()` - Update the display with current buffer
 - `await epd.sleep()` - Put display into low power mode
-- `await epd.cleanup()` - Clean up resources
+- `await epd.cleanup()` - Put the panel into deep sleep, power it down and release SPI/GPIO resources
 
 #### Power Control
 - `await epd.powerOn()` - Turn on display power (automatically called during init)
