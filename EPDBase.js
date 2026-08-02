@@ -1,6 +1,6 @@
 const fs = require('fs');
 const { PNG } = require('pngjs');
-const { CliGpio, SpiDeviceBackend, validatePin } = require('./hal');
+const { createDefaultGpio, SpiDeviceBackend, validatePin } = require('./hal');
 
 class EPDBase {
     constructor(options = {}) {
@@ -40,7 +40,7 @@ class EPDBase {
 
         // Hardware backends - injectable for testing or alternate platforms
         // (see hal.js for the gpio/spi interfaces)
-        this.gpio = options.gpio || new CliGpio(this.gpioChip);
+        this.gpio = options.gpio || createDefaultGpio(this.gpioChip);
         this.spi = options.spi || new SpiDeviceBackend(this.busNumber, this.deviceNumber, this.spiOptions);
 
         this.initialized = false;

@@ -146,6 +146,80 @@ test('waitUntilIdle: UC8176-class (7in5, 7in3f) waits while BUSY reads 0', async
     assert.strictEqual(await countBusyPolls('7in3f', [0, 1]), 2);
 });
 
+// --- Native GPIO backend --------------------------------------------------
+
+// Fake node-libgpiod binding matching the Chip/Line API of v0.6
+function createFakeLibgpiod() {
+    const state = { values: new Map(), requested: [], released: [] };
+
+    class FakeLine {
+        constructor(pin) { this.pin = pin; }
+        requestOutputMode() { state.requested.push({ pin: this.pin, direction: 'out' }); }
+        requestInputMode() { state.requested.push({ pin: this.pin, direction: 'in' }); }
+        setValue(v) { state.values.set(this.pin, v); }
+        getValue() { return state.values.get(this.pin) ?? 0; }
+        release() { state.released.push(this.pin); }
+    }
+
+    class FakeChip {
+        constructor(identifier) { state.chipIdentifier = identifier; }
+        getLine(pin) { return new FakeLine(pin); }
+    }
+
+    return { binding: { Chip: FakeChip, Line: FakeLine }, state };
+}
+
+test('LibgpiodGpio caches lines and round-trips values', async () => {
+    const { LibgpiodGpio } = require('../hal');
+    const { binding, state } = createFakeLibgpiod();
+    const gpio = new LibgpiodGpio('gpiochip0', binding);
+
+    assert.strictEqual(state.chipIdentifier, 'gpiochip0');
+
+    await gpio.write(17, 1);
+    await gpio.write(17, 0);
+    await gpio.write(17, 1);
+    // Three writes, but the line is requested only once
+    assert.deepStrictEqual(state.requested, [{ pin: 17, direction: 'out' }]);
+    assert.strictEqual(state.values.get(17), 1);
+
+    state.values.set(24, 1);
+    assert.strictEqual(await gpio.read(24), 1);
+    assert.deepStrictEqual(state.requested[1], { pin: 24, direction: 'in' });
+});
+
+test('LibgpiodGpio re-requests on direction change and releases all lines', async () => {
+    const { LibgpiodGpio } = require('../hal');
+    const { binding, state } = createFakeLibgpiod();
+    const gpio = new LibgpiodGpio('gpiochip0', binding);
+
+    await gpio.write(5, 1);
+    await gpio.read(5); // direction change: old line released, new one requested
+    assert.deepStrictEqual(state.released, [5]);
+    assert.deepStrictEqual(state.requested.map(r => r.direction), ['out', 'in']);
+
+    await gpio.write(6, 0);
+    await gpio.release();
+    assert.ok(state.released.includes(6));
+    assert.strictEqual(gpio.lines.size, 0);
+});
+
+test('LibgpiodGpio validates chip name and pins like CliGpio', () => {
+    const { LibgpiodGpio } = require('../hal');
+    const { binding } = createFakeLibgpiod();
+
+    assert.throws(() => new LibgpiodGpio('gpiochip0; rm -rf /', binding), /Invalid GPIO chip name/);
+    const gpio = new LibgpiodGpio('gpiochip0', binding);
+    assert.rejects(() => gpio.write('7; reboot', 1), /Invalid GPIO pin/);
+});
+
+test('createDefaultGpio falls back to CliGpio when node-libgpiod is unavailable', () => {
+    const { createDefaultGpio, CliGpio } = require('../hal');
+    // node-libgpiod is not installed in this environment
+    const gpio = createDefaultGpio('gpiochip0');
+    assert.ok(gpio instanceof CliGpio);
+});
+
 // --- Full display cycle ---------------------------------------------------
 
 test('13in3k mono: init + display sends the full framebuffer', async () => {

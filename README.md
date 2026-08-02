@@ -38,6 +38,23 @@ The `canvas` module is an optional extra — install it separately
 (`npm install canvas`) if you want to render with `drawCanvas()`; everything
 else (including PNG loading) works without it.
 
+### Faster GPIO (Recommended)
+
+By default GPIO pins are toggled by spawning libgpiod's `gpioset`/`gpioget`
+CLI tools — a process per toggle. Installing the optional native binding
+makes pin toggles native calls instead, which speeds up refreshes
+substantially:
+
+```bash
+sudo apt install libgpiod-dev
+npm install node-libgpiod
+```
+
+No code changes needed — the library detects `node-libgpiod` and uses it
+automatically, falling back to the CLI tools when it isn't available. You can
+check which backend is active with `epd.gpio.constructor.name`
+(`LibgpiodGpio` vs `CliGpio`).
+
 ### GPIO Permissions (Recommended)
 For security, add your user to the `gpio` group instead of running as root:
 
@@ -203,10 +220,12 @@ const epd = createDisplay('13in3k', 'mono', {
 });
 ```
 
-The default backends shell out to libgpiod's `gpioset`/`gpioget` (with input
-validation, no shell interpolation) and use the `spi-device` module. The
-`spi-device` module is only loaded when the default SPI backend is used, so
-the library also runs on machines without SPI support (e.g. in CI).
+The default GPIO backend is `LibgpiodGpio` (native `node-libgpiod` binding,
+lines requested once and held) when that module is installed, otherwise
+`CliGpio` (shells out to libgpiod's `gpioset`/`gpioget` via `execFile` with
+input validation — no shell interpolation). The default SPI backend uses the
+`spi-device` module, loaded only when actually used, so the library also runs
+on machines without SPI support (e.g. in CI).
 
 #### `getSupportedModels()`
 Returns array of supported models with their specifications.
