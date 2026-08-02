@@ -79,7 +79,7 @@ module.exports = {
             { model: '7in3f', size: '800x480', colorModes: ['7color'], description: '7.3" full color (7 colors)' },
             { model: '13in3k', size: '960x680', colorModes: ['mono', '4gray'], description: '13.3" mono/4-grayscale' },
             { model: '13in3b', size: '960x680', colorModes: ['3color'], description: '13.3" black/white/red' },
-            { model: '13in3gray', size: '1600x1200', colorModes: ['16gray'], description: '13.3" 16-level grayscale (IT8951)' }
+            { model: '13in3gray', size: '1600x1200', colorModes: ['16gray'], description: '13.3" 16-level grayscale (IT8951) - EXPERIMENTAL, driver not yet functional', experimental: true }
         ];
     }
 };

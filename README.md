@@ -26,7 +26,11 @@ Not all devices have been tested in the field. Please create a GitHub issue if y
 | 7in3f     | 800 × 480   | 7-color           | 7.3" full color (7 colors)         | Untested          |
 | 13in3k    | 960 × 680   | Mono, 4-grayscale | 13.3" with grayscale support       | Confirmed working |
 | 13in3b    | 960 × 680   | 3-color           | 13.3" black/white/red or yellow    | Untested          |
-| 13in3gray | 1600 × 1200 | 16-grayscale      | 13.3" 16-level grayscale (IT8951)  | Untested          |
+| 13in3gray | 1600 × 1200 | 16-grayscale      | 13.3" 16-level grayscale (IT8951)  | Experimental — not functional |
+
+Note: the 13in3gray driver is gated behind an `experimental: true` option
+because the IT8951's 16-bit command protocol is not yet implemented —
+constructing it without that option throws. Contributions welcome.
 
 ## Installation
 
@@ -100,6 +104,11 @@ const { createDisplay } = require('waveshare-epaper');
 ```
 
 ### 16-grayscale Example (IT8951 Controller)
+
+> ⚠️ **Experimental:** this driver does not yet speak the IT8951's actual
+> protocol and will not drive the panel. The example shows the intended API;
+> it requires `experimental: true` to run.
+
 ```javascript
 const { createDisplay } = require('waveshare-epaper');
 
@@ -109,7 +118,8 @@ const { createDisplay } = require('waveshare-epaper');
         dcPin: 25,
         busyPin: 24,
         pwrPin: 18,
-        vcom: -2.30  // Adjust according to your display
+        vcom: -2.30,  // Adjust according to your display
+        experimental: true  // Driver is not yet functional; see note above
     });
 
     await epd.init();

@@ -4,6 +4,18 @@ class EPD13in3Gray extends EPDBase {
     constructor(options = {}) {
         super(options);
 
+        // The IT8951 controller speaks a different protocol than the other
+        // panels: 16-bit command words with 0x6000/0x0000 preambles and SPI
+        // reads, none of which this driver implements yet - as written it
+        // sends truncated bytes the controller cannot understand.
+        if (!options.experimental) {
+            throw new Error(
+                'The 13in3gray (IT8951) driver is experimental and not yet functional: ' +
+                'the IT8951 16-bit command protocol is not implemented. ' +
+                'Pass { experimental: true } to construct it anyway for development.'
+            );
+        }
+
         // 13.3 inch display with 1600x1200 resolution
         this.width = 1600;
         this.height = 1200;
