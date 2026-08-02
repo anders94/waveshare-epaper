@@ -2,6 +2,10 @@
 // Run with: npm test
 
 const assert = require('assert');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const { PNG } = require('pngjs');
 const { createDisplay } = require('..');
 
 // --- Mock HAL -------------------------------------------------------------
@@ -188,6 +192,104 @@ test('cleanup closes SPI and releases GPIO', async () => {
     await epd.cleanup();
     assert.ok(spi.closed);
     assert.ok(gpio.released);
+});
+
+// --- Robustness -----------------------------------------------------------
+
+test('waitUntilIdle throws on busy timeout', async () => {
+    const { gpio, spi } = createMockHal();
+    gpio.read = async () => 1; // stuck busy (SSD-family polarity)
+    const epd = createDisplay('13in3k', 'mono', { gpio, spi, busyTimeoutMs: 250 });
+
+    await assert.rejects(() => epd.waitUntilIdle(), /busy timeout after 250ms/);
+});
+
+test('display() rejects concurrent calls', async () => {
+    const { gpio, spi } = createMockHal();
+    const epd = createDisplay('2in13', 'mono', { gpio, spi });
+    epd.initialized = true;
+
+    let finish;
+    epd.displayImage = () => new Promise(resolve => { finish = resolve; });
+
+    const first = epd.display();
+    await assert.rejects(() => epd.display(), /already in progress/);
+
+    finish();
+    await first;
+
+    // A completed refresh unlocks the next one
+    epd.displayImage = async () => {};
+    await epd.display();
+});
+
+test('cleanup puts an initialized panel to sleep before power-off', async () => {
+    const { gpio, spi, log } = createMockHal();
+    const epd = createDisplay('13in3k', 'mono', { gpio, spi });
+    epd.initialized = true;
+
+    await epd.cleanup();
+
+    const sleep = parsePackets(log).find(p => p.command === 0x10);
+    assert.ok(sleep, 'expected a 0x10 (deep sleep) command');
+    assert.deepStrictEqual(Array.from(sleep.data), [0x01]);
+    assert.strictEqual(epd.initialized, false);
+});
+
+test('cleanup on an uninitialized panel sends no SPI traffic', async () => {
+    const { gpio, spi, log } = createMockHal();
+    const epd = createDisplay('13in3k', 'mono', { gpio, spi });
+
+    await epd.cleanup();
+    assert.strictEqual(log.filter(e => e.type === 'spi').length, 0);
+});
+
+test('7in5 and 7in3f use UC-family deep sleep sequences', async () => {
+    {
+        const { gpio, spi, log } = createMockHal();
+        gpio.read = async () => 1; // idle for active-low BUSY
+        const epd = createDisplay('7in5', 'mono', { gpio, spi });
+        await epd.sleep();
+        const packets = parsePackets(log);
+        assert.deepStrictEqual(packets.map(p => p.command), [0x02, 0x07]);
+        assert.deepStrictEqual(Array.from(packets[1].data), [0xA5]);
+    }
+    {
+        const { gpio, spi, log } = createMockHal();
+        const epd = createDisplay('7in3f', '7color', { gpio, spi });
+        await epd.sleep();
+        const packets = parsePackets(log);
+        assert.deepStrictEqual(packets.map(p => p.command), [0x07]);
+        assert.deepStrictEqual(Array.from(packets[0].data), [0xA5]);
+    }
+});
+
+test('csPin option is ignored and CS is absent from the pin map', () => {
+    const { gpio, spi } = createMockHal();
+    const epd = createDisplay('2in13', 'mono', { gpio, spi, csPin: 22 });
+    assert.strictEqual(epd.pins.CS, undefined);
+});
+
+test('loadPNG enforces the pixel cap and converts pixels', async () => {
+    // 2x2 PNG: opaque black at (0,0), opaque white elsewhere
+    const png = new PNG({ width: 2, height: 2 });
+    png.data.fill(255);
+    png.data[0] = png.data[1] = png.data[2] = 0;
+    const file = path.join(os.tmpdir(), `waveshare-epaper-test-${process.pid}.png`);
+    fs.writeFileSync(file, PNG.sync.write(png));
+
+    try {
+        const { gpio, spi } = createMockHal();
+        const epd = createDisplay('2in13', 'mono', { gpio, spi });
+        const image = await epd.loadPNG(file);
+        assert.strictEqual(image.pixels[0], 0); // black
+        assert.strictEqual(image.pixels[1], 1); // white
+
+        const capped = createDisplay('2in13', 'mono', { gpio, spi, maxImagePixels: 3 });
+        await assert.rejects(() => capped.loadPNG(file), /PNG too large/);
+    } finally {
+        fs.unlinkSync(file);
+    }
 });
 
 // --- Runner ---------------------------------------------------------------

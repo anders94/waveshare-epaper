@@ -146,6 +146,12 @@ class EPD7in3f extends EPDBase {
         this.drawLine(x0, y0, x1, y1, color);
     }
 
+    async sleep() {
+        // Deep sleep (per EPD_7IN3F_Sleep in the Waveshare C reference)
+        await this.sendCommand(0x07);
+        await this.sendData(0xA5);
+    }
+
     // Factory method
     static create(options = {}) {
         return new EPD7in3f(options);

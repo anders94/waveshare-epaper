@@ -13,15 +13,25 @@ class EPDBase {
             bitsPerWord: 8
         };
 
-        // GPIO pins (using gpiod for RPi5)
+        // GPIO pins (using gpiod for RPi5). Chip select is not listed here:
+        // it is driven by the SPI controller's CE line, not a GPIO.
         this.pins = {
             RST: validatePin('rstPin', options.rstPin ?? 17),
             DC: validatePin('dcPin', options.dcPin ?? 25),
-            CS: validatePin('csPin', options.csPin ?? 22),
             BUSY: validatePin('busyPin', options.busyPin ?? 24),
             PWR: validatePin('pwrPin', options.pwrPin ?? 18)
         };
+        if (options.csPin !== undefined) {
+            console.warn("waveshare-epaper: csPin is ignored - chip select is driven by the SPI controller's CE line (deviceNumber selects CE0/CE1)");
+        }
         this.gpioChip = options.gpioChip || 'gpiochip0';
+
+        // How long waitUntilIdle() polls the BUSY pin before throwing
+        this.busyTimeoutMs = options.busyTimeoutMs ?? 10000;
+
+        // Sanity cap on PNG dimensions to prevent huge allocations from
+        // malformed or hostile image files
+        this.maxImagePixels = options.maxImagePixels ?? (1 << 24); // ~16.7M pixels
 
         // GPIO level of the BUSY pin while the panel is busy. SSD-family
         // controllers hold BUSY high while busy (the default); UC8176-class
@@ -34,6 +44,7 @@ class EPDBase {
         this.spi = options.spi || new SpiDeviceBackend(this.busNumber, this.deviceNumber, this.spiOptions);
 
         this.initialized = false;
+        this.displayInProgress = false;
 
         // These will be set by subclasses
         this.width = 0;
@@ -144,16 +155,16 @@ class EPDBase {
     }
 
     async waitUntilIdle() {
-        let timeout = 0;
-        const maxTimeout = 100; // 10 seconds max wait
+        const pollMs = 100;
+        const maxPolls = Math.ceil(this.busyTimeoutMs / pollMs);
+        let polls = 0;
 
         while (await this.readGPIO(this.pins.BUSY) === this.busyActiveLevel) {
-            await this.delay(100);
-            timeout++;
+            await this.delay(pollMs);
+            polls++;
 
-            if (timeout >= maxTimeout) {
-                console.log('Warning: Display busy timeout - continuing anyway');
-                break;
+            if (polls >= maxPolls) {
+                throw new Error(`Display busy timeout after ${this.busyTimeoutMs}ms - check wiring and busyPin setting`);
             }
         }
     }
@@ -208,9 +219,17 @@ class EPDBase {
         if (!this.initialized) {
             throw new Error('Display not initialized. Call init() first.');
         }
+        if (this.displayInProgress) {
+            throw new Error('display() already in progress - concurrent refreshes would corrupt the panel data stream');
+        }
 
-        // Display-specific implementation (implemented by subclasses)
-        await this.displayImage();
+        this.displayInProgress = true;
+        try {
+            // Display-specific implementation (implemented by subclasses)
+            await this.displayImage();
+        } finally {
+            this.displayInProgress = false;
+        }
     }
 
     // Abstract methods to be implemented by subclasses
@@ -428,10 +447,15 @@ class EPDBase {
             fs.createReadStream(filePath)
                 .pipe(new PNG())
                 .on('parsed', function() {
+                    if (this.width * this.height > self.maxImagePixels) {
+                        reject(new Error(`PNG too large: ${this.width}x${this.height} exceeds the ${self.maxImagePixels} pixel limit (maxImagePixels option)`));
+                        return;
+                    }
+
                     const imageData = {
                         width: this.width,
                         height: this.height,
-                        pixels: new Array(this.width * this.height)
+                        pixels: new Uint8Array(this.width * this.height)
                     };
 
                     // Convert RGBA pixels to display format
@@ -547,6 +571,16 @@ class EPDBase {
     }
 
     async cleanup() {
+        // Put the panel into deep sleep before cutting power - leaving
+        // e-paper active with a static charge degrades the panel over time
+        if (this.initialized) {
+            try {
+                await this.sleep();
+            } catch (error) {
+                // Ignore errors during cleanup
+            }
+        }
+
         try {
             this.spi.close();
         } catch (error) {
@@ -568,6 +602,8 @@ class EPDBase {
         } catch (error) {
             // Ignore errors during cleanup
         }
+
+        this.initialized = false;
     }
 
     delay(ms) {

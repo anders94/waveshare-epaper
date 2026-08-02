@@ -73,6 +73,15 @@ class EPD7in5 extends EPDBase {
         await this.sendCommand(0x12);
         await this.waitUntilIdle();
     }
+
+    async sleep() {
+        // Power off, then deep sleep
+        // (per EPD_7IN5_Sleep in the Waveshare C reference)
+        await this.sendCommand(0x02);
+        await this.waitUntilIdle();
+        await this.sendCommand(0x07);
+        await this.sendData(0xA5);
+    }
 }
 
 module.exports = {
